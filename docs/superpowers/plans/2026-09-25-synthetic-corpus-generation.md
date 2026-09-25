@@ -1463,6 +1463,31 @@ def test_manifest_schema_fields(tmp_path):
     assert set(manifest["spec"]) == {
         "alphas", "families", "master_seeds", "quota", "sizes",
     }
+
+
+def test_generator_fingerprint_is_stable_hex():
+    first = corpus.generator_fingerprint()
+    assert first == corpus.generator_fingerprint()
+    assert len(first) == 64
+    assert all(c in "0123456789abcdef" for c in first)
+
+
+def test_manifest_fingerprint_matches_recomputation(tmp_path):
+    manifest = corpus.run_generation(
+        out_dir=tmp_path, quota_override={"train": 1, "validation": 1, "test": 1}
+    )
+    assert manifest["generator_fingerprint"] == corpus.generator_fingerprint()
+
+
+def test_fingerprint_covers_the_runtime_not_just_source(monkeypatch):
+    """指纹必须随运行环境变化。
+
+    只哈希 .py 文件的实现会在这里失败——而那正是最需要诊断的情形：
+    代码一行未改、numpy 升级了，输出却变了。
+    """
+    baseline = corpus.generator_fingerprint()
+    monkeypatch.setattr(corpus.platform, "python_version", lambda: "9.9.9")
+    assert corpus.generator_fingerprint() != baseline
 ```
 
 - [ ] **Step 2: 运行测试确认失败**
@@ -1476,6 +1501,7 @@ Expected: FAIL，`AttributeError: module ... has no attribute 'write_cell'`
 ```python
 import hashlib
 import json
+import platform
 from datetime import datetime, timezone
 from pathlib import Path
 
@@ -1524,17 +1550,30 @@ def write_cell(path: Path, instances: list[dict]) -> str:
 
 
 def generator_fingerprint() -> str:
-    """所有生成器模块内容的合并哈希，用于事后诊断「输出为何变了」。"""
-    modules = [
+    """生成器代码与运行环境的合并哈希，用于事后诊断「输出为何变了」。
+
+    必须同时纳入**运行环境**，而不只是 .py 文件：numpy 升级会改变抽样与浮点
+    实现，CPython 升级会改变 dict 顺序与随机数实现。若只哈希源码，那么最
+    容易被忽略、也最难排查的那类原因（「代码没动，结果却变了」）恰好是
+    指纹唯一检测不到的。
+    """
+    digest = hashlib.sha256()
+    sources = [
         Path(__file__),
         Path(__file__).with_name("families.py"),
         Path(__file__).with_name("hashing.py"),
         Path(__file__).with_name("seeds.py"),
         REPO_ROOT / "experiment" / "data" / "spec.py",
     ]
-    digest = hashlib.sha256()
-    for module in sorted(modules):
-        digest.update(module.read_bytes())
+    for source in sorted(sources):
+        digest.update(source.read_bytes())
+
+    requirements = REPO_ROOT / "requirements.txt"
+    if requirements.is_file():
+        digest.update(requirements.read_bytes())
+
+    digest.update(f"python={platform.python_version()}".encode("utf-8"))
+    digest.update(f"numpy={np.__version__}".encode("utf-8"))
     return digest.hexdigest()
 
 
@@ -1609,10 +1648,12 @@ def run_generation(
     return manifest
 ```
 
+**关于 `generated_at` 与「字节级相同」的范围**：`manifest.json` 含墙钟时间戳，因此它**不可能**两次运行字节相同。字节级幂等的断言范围是 **144 个 `.jsonl` cell 文件**；manifest 的比对须排除 `generated_at` 这一个字段。这一点在 Task 13 Step 6 的验收脚本里已经这样处理（脚本用 `Where-Object Name -ne 'manifest.json'` 排除整个 manifest）。不要为了凑「字节级相同」而删掉 `generated_at`——它记录的是产物何时生成，是审计信息，删掉是净损失。
+
 - [ ] **Step 4: 运行测试确认通过**
 
 Run: `venv\Scripts\python.exe -m pytest tests/test_corpus.py -v`
-Expected: 26 passed
+Expected: 29 passed
 
 - [ ] **Step 5: Commit**
 
@@ -1854,7 +1895,7 @@ git commit -m "test(data): 金样本锁定已冻结的生成语义"
 2. 144 个 cell 齐备且配额精确（Task 13 Step 7）
 3. 8400 个实例哈希全局唯一（Task 11 的 `test_manifest_global_hashes_are_unique` + Task 13 Step 7）
 4. 每个 cell 的 SHA-256 与 manifest 一致（Task 11 的 `test_manifest_records_actual_file_hashes`）
-5. 重跑字节级相同（Task 13 Step 6）
+5. **144 个 `.jsonl` 重跑字节级相同**（Task 13 Step 6）。`manifest.json` 含 `generated_at` 时间戳，不计入字节相等断言——它的比对须排除该字段
 6. `datasets/` 未被 git 跟踪（Task 12 Step 5）
 
 设计文档第 11 节第 6、7 条属于 `collect` 子系统的验收，不在本计划范围，见配套计划 `2026-09-25-uci-collection-and-cleaning.md`。
