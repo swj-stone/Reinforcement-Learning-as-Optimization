@@ -201,3 +201,14 @@ $RECYCLE.BIN/
 # 仅忽略个人本地设置；如需共享请提交 .claude/settings.json
 .claude/settings.local.json
 .claude/*.local.*
+
+
+# =============================================================================
+#  12. docs/ —— 默认不跟踪，仅放行设计文档目录
+# =============================================================================
+# git 不会深入一个已被排除的目录，所以反放行必须逐级进行，
+# 且每一级都要先排除内容、再放行下一级。只写 "!/docs/superpowers/specs/" 是无效的。
+/docs/*
+!/docs/superpowers/
+/docs/superpowers/*
+!/docs/superpowers/specs/
