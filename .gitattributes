@@ -1,0 +1,86 @@
+# =============================================================================
+#  .gitattributes
+#  Project: Reinforcement Learning as Optimization (0/1 knapsack comparison)
+# =============================================================================
+#  目的：让行尾在「索引区 / 工作区 / 跨平台检出」三处保持一致，使实验产物的
+#        字节级可复现性不受 git 自动转换干扰。
+#
+#  为什么需要它：本机 core.autocrlf=true（Git for Windows 默认），每次 checkout
+#  会把 LF 改写成 CRLF。而 canonical instance hash、金样本测试夹具、manifest 中
+#  的 SHA-256 都要求字节稳定。core.autocrlf 是本机配置，不随仓库分发；
+#  .gitattributes 随仓库分发且优先级更高，对协作者与评审者的新克隆同样生效。
+#
+#  规则语法：
+#    text=auto  由 git 探测文本/二进制（含 NUL 字节者判为二进制，不转换）
+#    eol=lf     检出到工作区时用 LF
+#    eol=crlf   检出到工作区时用 CRLF
+#    binary     等价于 "-text -diff -merge"，二进制文件的标准写法
+# =============================================================================
+
+
+# -----------------------------------------------------------------------------
+#  1. 默认：文本文件统一 LF（含入库 normalize 与检出）
+# -----------------------------------------------------------------------------
+* text=auto eol=lf
+
+
+# -----------------------------------------------------------------------------
+#  2. Windows 脚本：必须 CRLF，否则「运行会出错」
+# -----------------------------------------------------------------------------
+# cmd.exe 对纯 LF 的批处理解析不可靠，尤其涉及 goto/label 与多行结构
+*.bat  text eol=crlf
+*.cmd  text eol=crlf
+# PowerShell 本身接受 LF，但 here-string 等结构在 CRLF 下才与 Windows 原生
+# 行为完全一致；统一 CRLF 以消除平台相关的解析差异
+*.ps1  text eol=crlf
+*.psm1 text eol=crlf
+*.psd1 text eol=crlf
+
+
+# -----------------------------------------------------------------------------
+#  3. 需要字节稳定的文本：显式声明，防止被后续规则误判
+# -----------------------------------------------------------------------------
+# 语料与配置（canonical hash、manifest SHA-256 的被哈希对象）
+*.jsonl text eol=lf
+*.json  text eol=lf
+*.csv   text eol=lf
+*.yaml  text eol=lf
+*.yml   text eol=lf
+*.toml  text eol=lf
+# 代码与文档
+*.py    text eol=lf
+*.md    text eol=lf
+*.txt   text eol=lf
+*.cfg   text eol=lf
+*.svg   text eol=lf
+
+
+# -----------------------------------------------------------------------------
+#  4. 二进制：禁止任何转换
+# -----------------------------------------------------------------------------
+# 图像
+*.png  binary
+*.jpg  binary
+*.jpeg binary
+*.gif  binary
+*.pdf  binary
+# 电子表格与压缩包（UCI 原始件）
+*.xlsx binary
+*.xls  binary
+*.zip  binary
+*.gz   binary
+*.tar  binary
+*.7z   binary
+# 模型权重与张量
+*.pt        binary
+*.pth       binary
+*.ckpt      binary
+*.onnx      binary
+*.npy       binary
+*.npz       binary
+*.pkl       binary
+*.joblib    binary
+*.safetensors binary
+# 列式数据
+*.parquet binary
+*.feather binary
