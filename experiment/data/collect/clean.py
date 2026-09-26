@@ -8,9 +8,17 @@ from __future__ import annotations
 
 from decimal import ROUND_HALF_UP, Decimal, localcontext
 
+import hashlib
+from pathlib import Path
+
 import pandas as pd
 
-from experiment.data.spec import REQUIRED_COLUMNS, SOURCE_COLUMNS, STOCK_CODE_RE
+from experiment.data.spec import (
+    LOTS_COLUMNS,
+    REQUIRED_COLUMNS,
+    SOURCE_COLUMNS,
+    STOCK_CODE_RE,
+)
 
 #: 中间计算的十进制精度。工作簿的价格最多 3 位小数、数量最多 5 位，
 #: 28 位远超所需，仅用于杜绝任何隐式截断。
@@ -140,3 +148,26 @@ def apply_cleaning(raw: pd.DataFrame) -> tuple[pd.DataFrame, dict]:
         "kept_rows": int(kept_mask.sum()),
         "dropped_by_reason": dropped,
     }
+
+
+def build_lots(cleaned: pd.DataFrame) -> pd.DataFrame:
+    """把清洗结果整理成最终输出表。
+
+    只保留 EXPERIMENT_PLAN.md 第 3.1 节点名的这些列：客户标识（CustomerID）
+    与描述文本（Description/Country）刻意排除，它们既不是背包的物品属性，
+    也会引入与优化目标无关的标识信息。
+    """
+    return cleaned.loc[:, list(LOTS_COLUMNS)].reset_index(drop=True)
+
+
+def write_lots_csv(path, lots: pd.DataFrame) -> str:
+    """写出批次表，返回内容的 SHA-256。
+
+    显式指定 LF 与 UTF-8：默认的 ``os.linesep`` 在 Windows 上会产生 CRLF，
+    使同一份数据在两台机器上哈希不同。
+    """
+    path = Path(path)
+    path.parent.mkdir(parents=True, exist_ok=True)
+    payload = lots.to_csv(index=False, lineterminator="\n", encoding="utf-8")
+    path.write_bytes(payload.encode("utf-8"))
+    return hashlib.sha256(payload.encode("utf-8")).hexdigest()
