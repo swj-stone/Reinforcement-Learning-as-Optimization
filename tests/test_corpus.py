@@ -131,3 +131,114 @@ def test_resample_cap_raises_instead_of_looping_forever():
     seen.add(inst["canonical_hash"])
     with pytest.raises(RuntimeError, match="resample"):
         corpus.build_cell("train", "uniform", 20, 0.25, 1, seen, max_attempt=0)
+
+
+import hashlib
+import json
+from pathlib import Path
+
+
+def _one_instance(split="train"):
+    return corpus.build_instance(split, "uniform", 20, 0.25, 0)
+
+
+def test_write_cell_creates_lf_terminated_jsonl(tmp_path):
+    path = tmp_path / "cell.jsonl"
+    digest = corpus.write_cell(path, [_one_instance()])
+    raw = path.read_bytes()
+    assert raw.endswith(b"\n")
+    assert b"\r" not in raw, "必须是 LF 换行，否则字节级不可复现"
+    assert digest == hashlib.sha256(raw).hexdigest()
+
+
+def test_write_cell_roundtrips(tmp_path):
+    path = tmp_path / "cell.jsonl"
+    instance = _one_instance()
+    corpus.write_cell(path, [instance])
+    lines = path.read_text(encoding="utf-8").splitlines()
+    assert len(lines) == 1
+    assert json.loads(lines[0]) == instance
+
+
+def test_write_cell_is_byte_identical_on_rerun(tmp_path):
+    a = tmp_path / "a.jsonl"
+    b = tmp_path / "b.jsonl"
+    corpus.write_cell(a, [_one_instance()])
+    corpus.write_cell(b, [_one_instance()])
+    assert a.read_bytes() == b.read_bytes()
+
+
+def test_run_generation_writes_every_cell_and_manifest(tmp_path):
+    manifest = corpus.run_generation(out_dir=tmp_path, quota_override={"train": 2, "validation": 1, "test": 1})
+    assert (tmp_path / "manifest.json").is_file()
+    assert len(manifest["cells"]) == 48 * 3
+    for split in ("train", "validation", "test"):
+        expected = {"train": 2, "validation": 1, "test": 1}[split]
+        for cell in [c for c in manifest["cells"] if c["split"] == split]:
+            assert cell["count"] == expected
+
+
+def test_manifest_records_actual_file_hashes(tmp_path):
+    manifest = corpus.run_generation(out_dir=tmp_path, quota_override={"train": 1, "validation": 1, "test": 1})
+    for cell in manifest["cells"]:
+        raw = (tmp_path / cell["path"]).read_bytes()
+        assert cell["sha256"] == hashlib.sha256(raw).hexdigest()
+
+
+def test_manifest_global_hashes_are_unique(tmp_path):
+    corpus.run_generation(out_dir=tmp_path, quota_override={"train": 3, "validation": 2, "test": 2})
+    hashes = []
+    for path in sorted(tmp_path.rglob("*.jsonl")):
+        for line in path.read_text(encoding="utf-8").splitlines():
+            hashes.append(json.loads(line)["canonical_hash"])
+    assert len(set(hashes)) == len(hashes), "跨 split 出现重复实例"
+
+
+def test_run_generation_is_idempotent(tmp_path):
+    first = tmp_path / "first"
+    second = tmp_path / "second"
+    corpus.run_generation(out_dir=first, quota_override={"train": 2, "validation": 1, "test": 1})
+    corpus.run_generation(out_dir=second, quota_override={"train": 2, "validation": 1, "test": 1})
+    for path in sorted(first.rglob("*.jsonl")):
+        twin = second / path.relative_to(first)
+        assert path.read_bytes() == twin.read_bytes(), f"{path.name} 不可复现"
+
+
+def test_manifest_schema_fields(tmp_path):
+    manifest = corpus.run_generation(out_dir=tmp_path, quota_override={"train": 1, "validation": 1, "test": 1})
+    assert manifest["schema_version"] == 1
+    assert set(manifest) == {
+        "cells", "dedup", "generated_at", "generator_fingerprint",
+        "schema_version", "spec",
+    }
+    assert set(manifest["dedup"]) == {
+        "collisions_resampled", "max_resample_attempt", "total_instances",
+    }
+    assert set(manifest["spec"]) == {
+        "alphas", "families", "master_seeds", "quota", "sizes",
+    }
+
+
+def test_generator_fingerprint_is_stable_hex():
+    first = corpus.generator_fingerprint()
+    assert first == corpus.generator_fingerprint()
+    assert len(first) == 64
+    assert all(c in "0123456789abcdef" for c in first)
+
+
+def test_manifest_fingerprint_matches_recomputation(tmp_path):
+    manifest = corpus.run_generation(
+        out_dir=tmp_path, quota_override={"train": 1, "validation": 1, "test": 1}
+    )
+    assert manifest["generator_fingerprint"] == corpus.generator_fingerprint()
+
+
+def test_fingerprint_covers_the_runtime_not_just_source(monkeypatch):
+    """指纹必须随运行环境变化。
+
+    只哈希 .py 文件的实现会在这里失败——而那正是最需要诊断的情形：
+    代码一行未改、numpy 升级了，输出却变了。
+    """
+    baseline = corpus.generator_fingerprint()
+    monkeypatch.setattr(corpus.platform, "python_version", lambda: "9.9.9")
+    assert corpus.generator_fingerprint() != baseline
