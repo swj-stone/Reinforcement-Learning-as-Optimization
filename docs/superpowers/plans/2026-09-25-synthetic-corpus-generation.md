@@ -922,22 +922,31 @@ def test_skewed_two_index_sets_are_independent_and_can_overlap():
 
 
 def test_skewed_heavy_weight_values_are_in_range():
+    """重项权重落在 [200,500] 内。
+
+    必须按**秩**取最大的 k 项，不能写成 ``w[w >= 200]``：那样筛选阈值与断言
+    下界是同一个 200，``heavy.min() >= 200`` 便恒真，实现把重项下界挪到多低
+    都照样通过（实测 U(150,500) 时本测试仍绿，只有计数测试会响）。按秩取，
+    断言的两端才都真的在断言。
+    """
     w, _ = generate_items("skewed", 200, seed=2222)
-    heavy = w[w >= 200]
+    heavy = np.sort(w)[-10:]
     assert heavy.min() >= 200 and heavy.max() <= 500
 
 
 def test_skewed_base_densities_are_in_range():
+    """普通项密度落在 [1,5] 内。按秩取最小的 n-k 项，理由同上一条。"""
     w, v = generate_items("skewed", 200, seed=2223)
     d = v // w
-    base = d[d <= 5]
+    base = np.sort(d)[:190]
     assert base.min() >= 1 and base.max() <= 5
 
 
 def test_skewed_heavy_densities_are_in_range():
+    """重项密度落在 [30,60] 内。按秩取最大的 k 项，理由同上。"""
     w, v = generate_items("skewed", 200, seed=2224)
     d = v // w
-    heavy = d[d >= 30]
+    heavy = np.sort(d)[-10:]
     assert heavy.min() >= 30 and heavy.max() <= 60
 
 
@@ -975,8 +984,10 @@ def test_skewed_extremes_actually_reach_the_top_of_their_ranges():
     """极端值必须保留到接近取值上界，而不是被裁剪或压缩。
 
     单个 n=200 抽样只有 k=10 个重项，最大值波动太大（逐种子最低只有 386），故跨
-    60 个种子聚合共 600 次重项抽样：U[200,500] 的 600 次最大值低于 490 的概率约
-    1.5e-9，U[30,60] 低于 57 的概率约 3.5e-28，两道门槛都远在噪声之外。
+    60 个种子聚合共 600 次重项抽样。取值区间按 §6 是**含两端**的：U[200,500] 共
+    301 个取值，600 次最大值低于 490（即全部 <= 489，占其中 290 个）的概率约
+    1.99e-10；U[30,60] 共 31 个取值，低于 57（即全部 <= 56，占其中 27 个）的概率
+    约 1.00e-36。两道门槛都远在噪声之外。
 
     之所以必须另立一条：上面 `heavy.max() <= 500` 是**单边松界**，给重项加一个
     `np.clip(x, hw_lo, 450)` 反而让它更容易满足——实测把上界压到 450 / 300 / 210，
