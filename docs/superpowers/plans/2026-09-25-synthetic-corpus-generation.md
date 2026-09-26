@@ -12,6 +12,12 @@
 
 **工作目录:** 所有相对路径均以仓库根目录为基准。
 
+> **执行须知（PowerShell）：** 本计划的 PowerShell 片段全部假定当前目录已是仓库根。
+> 若非如此，`New-Item` / `Remove-Item` / `Copy-Item` 会**静默地在错误位置**执行或以
+> 非终止错误失败，而后续的 `"已创建"` 之类打印照常输出，造成成功假象。
+> 每条 PowerShell 命令前先 `Set-Location <仓库根>`，且判定成败要看**复查**（`Test-Path`、
+> `Get-FileHash`），不要看创建命令有没有报错。
+
 ---
 
 ## 文件结构
@@ -115,13 +121,16 @@ git commit -m "chore: 固定依赖版本并配置 pytest"
 
 - [ ] **Step 1: 建包标记文件**
 
-四个 `__init__.py` 均为**空文件**。逐项判断存在性，避免 `-Force` 截断已有内容：
+四个 `__init__.py` 均为**空文件**。逐项判断存在性，避免 `-Force` 截断已有内容；建文件前先确保父目录存在（`New-Item` 不会自动创建父目录，且对不存在的目录会以**非终止错误**失败——脚本若只打印「已创建」而不复查，会制造成功假象）：
 ```powershell
 foreach ($p in 'experiment\__init__.py','experiment\data\__init__.py','experiment\data\generate\__init__.py','tests\__init__.py') {
-  if (-not (Test-Path $p)) { New-Item -ItemType File $p | Out-Null; "created $p" }
+  $dir = Split-Path $p
+  if ($dir -and -not (Test-Path $dir)) { New-Item -ItemType Directory -Force $dir | Out-Null }
+  if (-not (Test-Path $p)) { New-Item -ItemType File $p | Out-Null }
+  if (Test-Path $p) { "OK $p" } else { "FAILED $p" }
 }
 ```
-Expected: 打印四行 `created ...`。
+Expected: 打印四行 `OK ...`。**判定依据是复查后的 `Test-Path`，不是 `New-Item` 有没有报错。** 若出现 `FAILED`，停下来排查，不要继续。
 
 - [ ] **Step 2: 写失败测试**
 
