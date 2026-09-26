@@ -547,7 +547,11 @@ N_REPEAT_BIG = 200_000
     ],
 )
 def test_round_half_up_scalar(value, expected):
-    assert round_half_up(value) == expected
+    out = round_half_up(value)
+    assert out == expected
+    # docstring 承诺「标量输入返回 int」。np.int64 不是 int 的子类，缺了
+    # int() 解包这一行 assert out == expected 照样绿——该承诺原本无人看守。
+    assert isinstance(out, int)
 
 
 def test_round_half_up_differs_from_bankers_rounding():
@@ -575,6 +579,19 @@ def test_uniform_is_dtype_int64():
     assert w.shape == (20,) and v.shape == (20,)
 
 
+def test_uniform_draw_order_is_frozen():
+    """w 先抽、v 后抽。顺序颠倒会改变每一个 uniform 实例，而边界、dtype、
+    独立性三个测试全都照旧通过——必须靠硬编码期望值才守得住。
+
+    期望值写成字面量而非「在测试里把公式重算一遍」：重算只能守住公式一致，
+    守不住 numpy 抽样流本身漂移（Task 11 把 np.__version__ 纳入指纹哈希，
+    正是因为升级 numpy 会改变抽样）。
+    """
+    w, v = generate_items("uniform", 6, seed=7)
+    assert w.tolist() == [95, 63, 69, 90, 58, 78]
+    assert v.tolist() == [84, 23, 6, 31, 29, 88]
+
+
 def test_uniform_weights_and_values_are_independent():
     w, v = generate_items("uniform", N_REPEAT, seed=999)
     corr = np.corrcoef(w.astype(float), v.astype(float))[0, 1]
@@ -585,6 +602,17 @@ def test_capacity_is_floor_of_alpha_times_total_weight():
     w, _ = generate_items("uniform", 100, seed=7)
     for alpha in (0.25, 0.50, 0.75):
         assert capacity_for(alpha, w) == math.floor(alpha * int(w.sum()))
+    # 上面那个实例 sum(w)=5400，是 4 的倍数，三个 alpha 的乘积全是整数，
+    # floor/round/ceil/int 四者同值——测试名里的 "floor" 在结构上守不住。
+    # 手工构造总和为 5 的实例（非 4 的倍数），令乘积的小数部分非零：
+    #   0.25*5 = 1.25 -> floor 1（ceil 给 2）
+    #   0.75*5 = 3.75 -> floor 3（round 给 4、ceil 给 4）
+    # 这把两个期望值写死；容量决定每个实例的可行集，取整模式一变，
+    # 8400 个实例的约束就全变了，而别处没有任何测试能发现。
+    odd = np.array([1, 2, 2], dtype=np.int64)
+    assert int(odd.sum()) == 5
+    assert capacity_for(0.25, odd) == 1
+    assert capacity_for(0.75, odd) == 3
 
 
 def test_capacity_of_alpha_one_equals_total_weight():
@@ -735,7 +763,7 @@ _FAMILY_FUNCS = {
 - [ ] **Step 4: 运行测试确认通过**
 
 Run: `venv\Scripts\python.exe -m pytest tests/test_families.py -v`
-Expected: 21 passed
+Expected: 18 passed
 
 - [ ] **Step 5: Commit**
 
@@ -794,12 +822,36 @@ def test_correlated_hits_the_floor_of_one():
     # w=1 处 e 取遍 [-10,10]，故 v = max(1, 1+e) 只能落在 [1, 11]
     assert v[w == 1].min() >= 1
     assert v[w == 1].max() <= 11
+
+
+def test_normal_draw_order_is_frozen():
+    """w 先抽、v 后抽。二者同分布、完全可交换，所以边界、中心、裁剪三处断言
+    在顺序颠倒后全部照旧通过——只有硬编码值守得住。
+
+    期望值按规格文本独立重算（normal(50,15) -> half-up -> clip[1,100]），
+    不是把实现跑一遍抄下来。
+    """
+    w, v = generate_items("normal", 6, seed=7)
+    assert w.tolist() == [50, 54, 46, 37, 43, 35]
+    assert v.tolist() == [51, 70, 43, 41, 57, 55]
+
+
+def test_correlated_formula_is_frozen():
+    """v = max(1, w + e)，且 w 先抽、e 后抽。
+
+    必须把 v 的值也写死：e 对称于 0，故 w - e 的分布与 w + e 完全相同，
+    「差落在 [-10,10]」与「能触到 1」两条断言对减号照样全绿，w 更是一字不变。
+    这正是本测试名断言的 "+e" 唯一被守住的地方。
+    """
+    w, v = generate_items("correlated", 6, seed=7)
+    assert w.tolist() == [95, 63, 69, 90, 58, 78]
+    assert v.tolist() == [102, 57, 60, 86, 53, 86]
 ```
 
 - [ ] **Step 2: 运行测试**
 
 Run: `venv\Scripts\python.exe -m pytest tests/test_families.py -v`
-Expected: PASS（实现已在 Task 4 写好；若有 FAIL，说明 Task 4 的实现有误，回到 Task 4 修正）
+Expected: **26 passed**（Task 4 的 18 + 本步新增的 8）。实现已在 Task 4 写好；若有 FAIL，多半是 Task 4 的实现有误，回到 Task 4 修正——但两个金样本失败意味着**抽样次序**被改了，那是另一类错误。若实际数量不是 26，如实报告实际数字，不要为了凑数字而增删测试。
 
 - [ ] **Step 3: Commit**
 
@@ -874,12 +926,27 @@ def test_skewed_keeps_extreme_observations():
     w, _ = generate_items("skewed", 200, seed=2225)
     assert w.max() / np.median(w) > 10
     assert int((w >= 200).sum()) == 10
+
+
+def test_skewed_draw_order_is_frozen():
+    """六步顺序：w, d, idx_w, 替换权重, idx_d, 替换密度。
+
+    上面那些断言测的都是集合性质（恰好 k 个重项、范围正确、两集合独立），
+    对调两个替换块的先后完全不敏感。只有硬编码值能钉住 rng 的调用次序。
+
+    n=6 时 k=1：w[5]=201 说明 idx_w={5}，而 d 由 v//w 还原为
+    [5, 2, 55, 2, 2, 5]，说明 idx_d={2}——两个索引集不同，顺带钉住
+    它们确实是各自独立抽取的。
+    """
+    w, v = generate_items("skewed", 6, seed=7)
+    assert w.tolist() == [19, 13, 14, 18, 12, 201]
+    assert v.tolist() == [95, 26, 770, 36, 24, 1005]
 ```
 
 - [ ] **Step 2: 运行测试确认失败或通过**
 
 Run: `venv\Scripts\python.exe -m pytest tests/test_families.py -v`
-Expected: 全部 PASS。若有 FAIL，最可能是 Task 4 的 `_skewed` 把两个索引集写成了同一组，回到 Task 4 修正——这是设计文档第 6 节点名的最易错处。
+Expected: **40 passed**（Task 5 的 26 + 本步新增的 14）。若有 FAIL，最可能是 Task 4 的 `_skewed` 把两个索引集写成了同一组，回到 Task 4 修正——这是设计文档第 6 节点名的最易错处。若实际数量不是 40，如实报告实际数字，不要为了凑数字而增删测试。
 
 - [ ] **Step 3: Commit**
 
