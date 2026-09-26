@@ -41,6 +41,65 @@ MAX_RESAMPLE_ATTEMPT: int = 1000
 #: manifest 的模式版本
 SCHEMA_VERSION: int = 1
 
+# --- UCI Online Retail 采集 --------------------------------------------------
+
+UCI_URL: str = "https://archive.ics.uci.edu/static/public/352/online+retail.zip"
+UCI_ZIP_ENTRY: str = "Online Retail.xlsx"
+UCI_SHEET_NAME: str = "Online Retail"
+#: 冻结的工作簿字节数。UCI 若替换了文件，此校验会立刻失败，而不是静默换数据。
+UCI_XLSX_BYTES: int = 23715344
+#: 仓库中原始工作簿的落盘名
+UCI_XLSX_NAME: str = "online_retail.xlsx"
+UCI_ZIP_NAME: str = "online_retail.zip"
+#: 部分镜像会拒绝没有 User-Agent 的请求
+USER_AGENT: str = "rl-knapsack-seminar/0.1 (+educational use)"
+
+#: 工作簿的全部源列，顺序即规则 8「全字段重复」的比较字段
+SOURCE_COLUMNS: tuple[str, ...] = (
+    "InvoiceNo",
+    "StockCode",
+    "Description",
+    "Quantity",
+    "InvoiceDate",
+    "UnitPrice",
+    "CustomerID",
+    "Country",
+)
+
+#: 缺失即丢弃的列。CustomerID 刻意不在其中：它经常为空，且不进模型特征。
+REQUIRED_COLUMNS: tuple[str, ...] = (
+    "InvoiceNo",
+    "StockCode",
+    "Quantity",
+    "InvoiceDate",
+    "UnitPrice",
+)
+
+#: 保留的股票代码形态：五位数字，可带字母后缀
+STOCK_CODE_RE: str = r"^\d{5}[A-Za-z]*$"
+
+#: 清洗流水线的规则名，顺序即执行顺序，也是报告中的键顺序
+CLEANING_RULES: tuple[str, ...] = (
+    "cancellation_invoice",
+    "nonpositive_quantity_or_price",
+    "missing_required_field",
+    "invalid_timestamp",
+    "non_integer_quantity",
+    "invalid_stock_code",
+    "exact_duplicate_record",
+    "zero_value_pence",
+)
+
+#: lots_clean.csv 的列顺序
+LOTS_COLUMNS: tuple[str, ...] = (
+    "source_row_id",
+    "invoice_no",
+    "stock_code",
+    "invoice_date",
+    "quantity_w",
+    "unit_price",
+    "value_pence",
+)
 # --- 输出路径 ---------------------------------------------------------------
 
 REPO_ROOT: Path = Path(__file__).resolve().parents[2]
