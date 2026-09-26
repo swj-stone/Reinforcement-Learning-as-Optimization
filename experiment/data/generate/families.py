@@ -23,7 +23,7 @@ from experiment.data.spec import (
 IntArray = np.ndarray
 
 
-def round_half_up(x):
+def round_half_up(x: float | IntArray) -> int | IntArray:
     """四舍五入（.5 进位），接受标量或数组。
 
     刻意不用 ``np.rint``：后者是银行家舍入，把 2.5 舍为 2。设计文档第 6 节
