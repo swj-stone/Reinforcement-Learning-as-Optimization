@@ -2083,7 +2083,7 @@ def test_golden_weights_are_integers():
 - [ ] **Step 2: 首次运行生成金样本**
 
 Run: `venv\Scripts\python.exe -m pytest tests/test_golden.py -v`
-Expected: 6 skipped，并在 `tests/golden/` 下生成 6 个 `.json`
+Expected: 1 passed, 6 skipped（6 个金样本首次落地后 skip；`test_golden_weights_are_integers` 无金样本时空过），并在 `tests/golden/` 下生成 6 个 `.json`
 
 - [ ] **Step 3: 人工核对金样本**
 
