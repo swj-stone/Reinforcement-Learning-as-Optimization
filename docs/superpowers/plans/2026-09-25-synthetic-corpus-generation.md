@@ -1040,7 +1040,8 @@ def test_stats_golden_values_pin_every_statistic():
 
     期望值按设计文档 8.1 节的表格独立算出，不是把实现跑一遍抄下来（本步之前
     compute_stats 尚不存在）。skewed 族 n=50 时 median(w)=9.5 而 mean(w)=34.98，
-    相差近四倍，故对 median->mean 的替换敏感：max/median 会从 52.1 掉到 14.3。
+    相差 3.68 倍，故对 median->mean 的替换敏感：max/median 会从 52.105 掉到 14.151
+    （max(w)=495，495/9.5 与 495/34.98）。
     """
     w, v = generate_items("skewed", 50, seed=5)
     stats = compute_stats(w, v)
