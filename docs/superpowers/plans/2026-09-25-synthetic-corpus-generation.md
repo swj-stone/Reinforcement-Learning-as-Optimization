@@ -214,7 +214,7 @@ def test_skew_k_is_floor_of_half_offset():
 - [ ] **Step 3: 运行测试确认失败**
 
 Run: `venv\Scripts\python.exe -m pytest tests/test_spec.py -v`
-Expected: FAIL，`ModuleNotFoundError: No module named 'experiment.data.spec'`
+Expected: FAIL，`ImportError: cannot import name 'spec' from 'experiment.data'`
 
 - [ ] **Step 4: 写实现**
 
@@ -1408,7 +1408,7 @@ def test_item_order_stream_is_isolated_from_items_stream():
 - [ ] **Step 2: 运行测试确认失败**
 
 Run: `venv\Scripts\python.exe -m pytest tests/test_corpus.py -v`
-Expected: FAIL，`ModuleNotFoundError: No module named 'experiment.data.generate.corpus'`
+Expected: FAIL，`ImportError: cannot import name 'corpus' from 'experiment.data.generate'`
 
 - [ ] **Step 3: 写实现**
 
@@ -1625,7 +1625,7 @@ git commit -m "feat(data): 跨 split 去重与确定性重抽"
 ## Task 11: 落盘与 manifest
 
 **Files:**
-- Modify: `experiment/data/generate/corpus.py`（追加 `write_cell`、`build_manifest`、`run_generation`）
+- Modify: `experiment/data/generate/corpus.py`（追加 `write_cell`、`generator_fingerprint`、`run_generation`）
 - Modify: `tests/test_corpus.py`（追加测试）
 
 - [ ] **Step 1: 追加失败测试**
@@ -2119,9 +2119,10 @@ venv\Scripts\python.exe -m experiment.data.generate.cli
 
 # 比对「相对路径 + 内容哈希」，只跳过含时间戳的 manifest.json
 function Get-Fingerprint($root) {
+  $prefix = (Resolve-Path $root).Path
   Get-ChildItem $root -Recurse -File |
     Where-Object Name -ne 'manifest.json' |
-    ForEach-Object { "{0} {1}" -f (Resolve-Path $_.FullName -Relative), (Get-FileHash $_.FullName).Hash } |
+    ForEach-Object { "{0} {1}" -f $_.FullName.Substring($prefix.Length), (Get-FileHash $_.FullName).Hash } |
     Sort-Object
 }
 $diff = Compare-Object (Get-Fingerprint $gen) (Get-Fingerprint $snapshot)
