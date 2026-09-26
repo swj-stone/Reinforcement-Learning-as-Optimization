@@ -60,6 +60,28 @@ def capacity_for(alpha: float, weights: IntArray) -> int:
     return math.floor(alpha * int(weights.sum()))
 
 
+def compute_stats(weights: IntArray, values: IntArray) -> dict[str, float]:
+    """描述实例的分布形态，供 EXPERIMENT_PLAN.md 第 8 节 E2 的分解使用。
+
+    六项定义见设计文档第 8.1 节。``k5 = max(1, ceil(0.05n))``；标准差用
+    总体标准差（``ddof=0``）；不做任何舍入。
+    """
+    return {
+        "top5_weight_share": _top_share(weights),
+        "top5_value_share": _top_share(values),
+        "max_over_median_weight": float(weights.max()) / float(np.median(weights)),
+        "max_over_median_value": float(values.max()) / float(np.median(values)),
+        "cv_weight": float(weights.std(ddof=0)) / float(weights.mean()),
+        "cv_value": float(values.std(ddof=0)) / float(values.mean()),
+    }
+
+
+def _top_share(x: IntArray) -> float:
+    k5 = max(1, math.ceil(0.05 * len(x)))
+    descending = np.sort(x)[::-1]
+    return float(descending[:k5].sum()) / float(x.sum())
+
+
 # --- 各族实现（顺序即冻结语义）---------------------------------------------
 
 

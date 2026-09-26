@@ -290,3 +290,87 @@ def test_skewed_extremes_actually_reach_the_top_of_their_ranges():
         top_d = max(top_d, int((v // w).max()))
     assert top_w >= 490
     assert top_d >= 57
+
+
+from experiment.data.generate.families import compute_stats
+
+
+def test_stats_keys_are_the_frozen_six():
+    w, v = generate_items("uniform", 50, seed=1)
+    assert set(compute_stats(w, v)) == {
+        "top5_weight_share",
+        "top5_value_share",
+        "max_over_median_weight",
+        "max_over_median_value",
+        "cv_weight",
+        "cv_value",
+    }
+
+
+def test_stats_all_are_finite_floats():
+    w, v = generate_items("skewed", 200, seed=2)
+    for name, value in compute_stats(w, v).items():
+        assert isinstance(value, float), name
+        assert math.isfinite(value), name
+
+
+@pytest.mark.parametrize("n, k5", [(20, 1), (50, 3), (100, 5), (200, 10)])
+def test_top5_share_uses_ceil_of_five_percent(n, k5):
+    x = np.arange(1, n + 1, dtype=np.int64)
+    stats = compute_stats(x, x)
+    top = np.sort(x)[::-1][:k5]
+    assert stats["top5_weight_share"] == pytest.approx(float(top.sum()) / float(x.sum()))
+
+
+def test_top5_share_of_uniform_is_modest():
+    """均匀分布下前 5% 的占比约 0.10——不是 0.05。
+
+    5% 的物品落在支撑集最右端，U(1,100) 的这 5% 均值约 98，因此份额约为
+    98/50.5 * 0.05 ≈ 0.097。这里给一个宽松的双侧区间，只用来确认量级正确。
+    """
+    w, _ = generate_items("uniform", N_REPEAT, seed=3)
+    stats = compute_stats(w, w)
+    assert 0.07 < stats["top5_weight_share"] < 0.14
+
+
+def test_cv_uses_population_std():
+    x = np.array([1, 2, 3, 4], dtype=np.int64)
+    assert compute_stats(x, x)["cv_weight"] == pytest.approx(
+        float(np.std(x, ddof=0)) / float(np.mean(x))
+    )
+
+
+def test_max_over_median_for_constant_array_is_one():
+    x = np.full(10, 7, dtype=np.int64)
+    assert compute_stats(x, x)["max_over_median_weight"] == pytest.approx(1.0)
+
+
+def test_skewed_has_larger_top5_share_than_uniform():
+    sw, _ = generate_items("skewed", 200, seed=4)
+    uw, _ = generate_items("uniform", 200, seed=4)
+    assert (
+        compute_stats(sw, sw)["top5_weight_share"]
+        > compute_stats(uw, uw)["top5_weight_share"]
+    )
+
+
+def test_stats_golden_values_pin_every_statistic():
+    """六项全部写死为字面量。
+
+    上面所有断言都传 (x, x)——权重与价值是同一个数组，所以把两项对调后全部
+    照旧通过。而唯一的 max_over_median 断言用的是常量数组，那里 mean 恒等于
+    median，测试名里的 "median" 同样守不住。
+
+    期望值按设计文档 8.1 节的表格独立算出，不是把实现跑一遍抄下来（本步之前
+    compute_stats 尚不存在）。skewed 族 n=50 时 median(w)=9.5 而 mean(w)=34.98，
+    相差 3.68 倍，故对 median->mean 的替换敏感：max/median 会从 52.105 掉到 14.151
+    （max(w)=495，495/9.5 与 495/34.98）。
+    """
+    w, v = generate_items("skewed", 50, seed=5)
+    stats = compute_stats(w, v)
+    assert stats["top5_weight_share"] == pytest.approx(0.7381360777587193)
+    assert stats["top5_value_share"] == pytest.approx(0.5764466315968098)
+    assert stats["max_over_median_weight"] == pytest.approx(52.10526315789474)
+    assert stats["max_over_median_value"] == pytest.approx(53.035714285714285)
+    assert stats["cv_weight"] == pytest.approx(2.9220023217743236)
+    assert stats["cv_value"] == pytest.approx(2.496525662188181)
