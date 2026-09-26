@@ -797,10 +797,18 @@ def test_normal_is_centred_near_50():
 
 
 def test_normal_reaches_both_clip_bounds():
-    """正态(50,15)在 20 万次抽样里必然越过两侧边界，否则裁剪没被触发。"""
-    w, _ = generate_items("normal", N_REPEAT_BIG, seed=4244)
+    """正态(50,15)在 20 万次抽样里必然越过两侧边界，否则裁剪没被触发。
+
+    w 与 v 必须**各自**断言。二者是同分布的两次独立抽样，但只有被断言的那个的
+    np.clip 才被守住：把 v 那一行的 clip 删掉，全套 51 个测试照样绿——因为在
+    test_normal_is_clipped_to_1_100 用的 4242/2000 上，裁剪前的 v 恰好落在
+    [2, 96]（w 则越界 2 次），那条 v 断言从来不可能失败。
+    """
+    w, v = generate_items("normal", N_REPEAT_BIG, seed=4244)
     assert w.min() == 1
     assert w.max() == 100
+    assert v.min() == 1
+    assert v.max() == 100
 
 
 def test_correlated_v_equals_max_one_w_plus_e():
@@ -817,12 +825,16 @@ def test_correlated_weights_span_full_range():
 
 
 def test_correlated_hits_the_floor_of_one():
-    """w=1 时 w+e 可低至 -9，v 必须被抬到 1，且永远不低于 1。"""
+    """去掉 max(1, ...) 地板后，seed=557 的 2000 次抽样里有 50 个 w+e < 1（最低 -9），
+    下面第一行断言随即变红——它才是真正守住地板的那个。
+    """
     w, v = generate_items("correlated", N_REPEAT, seed=557)
     assert (v >= 1).all()
+    # 这行只是「地板确实被够到过」的抽样 sanity check，对地板本身不敏感：
+    # 含地板与不含地板的 v 都能取到 1（例如 w=2、e=-1 时 w+e 本就等于 1）。
     assert (v == 1).any()
-    # w=1 处 e 取遍 [-10,10]，故 v = max(1, 1+e) 只能落在 [1, 11]
-    assert v[w == 1].min() >= 1
+    # w=1 处 e 取遍 [-10,10]，故 v = max(1, 1+e) 只能落在 [1, 11]。该上界同样守不住
+    # 地板（去掉地板后仍是 11），它守的是 e 的取值范围不被放宽。
     assert v[w == 1].max() <= 11
 
 
