@@ -178,3 +178,96 @@ def test_correlated_formula_is_frozen():
     w, v = generate_items("correlated", 6, seed=7)
     assert w.tolist() == [95, 63, 69, 90, 58, 78]
     assert v.tolist() == [102, 57, 60, 86, 53, 86]
+
+
+@pytest.mark.parametrize("n, k", [(20, 1), (50, 3), (100, 5), (200, 10)])
+def test_skewed_has_exactly_k_heavy_weights(n, k):
+    w, _ = generate_items("skewed", n, seed=31337)
+    assert int((w >= 200).sum()) == k
+    assert int((w <= 20).sum()) == n - k
+
+
+@pytest.mark.parametrize("n, k", [(20, 1), (50, 3), (100, 5), (200, 10)])
+def test_skewed_has_exactly_k_heavy_densities(n, k):
+    """d = v / w 可精确还原，因为没有取整损失。"""
+    w, v = generate_items("skewed", n, seed=31338)
+    d = v // w
+    assert (v % w == 0).all()
+    assert int((d >= 30).sum()) == k
+    assert int((d <= 5).sum()) == n - k
+
+
+def test_skewed_two_index_sets_are_independent_and_can_overlap():
+    """两个集合各自大小恰好为 k，但并集大小应有变化——说明它们独立抽取。"""
+    sizes = set()
+    for seed in range(60):
+        w, v = generate_items("skewed", 100, seed=seed)
+        heavy_w = set(np.flatnonzero(w >= 200).tolist())
+        heavy_d = set(np.flatnonzero((v // w) >= 30).tolist())
+        assert len(heavy_w) == 5 and len(heavy_d) == 5
+        sizes.add(len(heavy_w | heavy_d))
+    assert min(sizes) < 10, "两集合从不重叠，说明它们不是独立抽取的"
+    assert 10 in sizes, "两集合从不分离，说明它们其实被绑在了一起"
+
+
+def test_skewed_heavy_weight_values_are_in_range():
+    w, _ = generate_items("skewed", 200, seed=2222)
+    heavy = w[w >= 200]
+    assert heavy.min() >= 200 and heavy.max() <= 500
+
+
+def test_skewed_base_densities_are_in_range():
+    w, v = generate_items("skewed", 200, seed=2223)
+    d = v // w
+    base = d[d <= 5]
+    assert base.min() >= 1 and base.max() <= 5
+
+
+def test_skewed_heavy_densities_are_in_range():
+    w, v = generate_items("skewed", 200, seed=2224)
+    d = v // w
+    heavy = d[d >= 30]
+    assert heavy.min() >= 30 and heavy.max() <= 60
+
+
+def test_skewed_keeps_extreme_observations():
+    """极端值必须保留：最大值远高于中位数，且没有任何缩尾痕迹。"""
+    w, _ = generate_items("skewed", 200, seed=2225)
+    assert w.max() / np.median(w) > 10
+    assert int((w >= 200).sum()) == 10
+
+
+def test_skewed_draw_order_is_frozen():
+    """六步顺序：w, d, idx_w, 替换权重, idx_d, 替换密度。
+
+    上面那些断言测的都是集合性质（恰好 k 个重项、范围正确、两集合独立），
+    对调两个替换块的先后完全不敏感。只有硬编码值能钉住 rng 的调用次序。
+
+    n=6 时 k=1：w[5]=201 说明 idx_w={5}，而 d 由 v//w 还原为
+    [5, 2, 55, 2, 2, 5]，说明 idx_d={2}——两个索引集不同，顺带钉住
+    它们确实是各自独立抽取的。
+    """
+    w, v = generate_items("skewed", 6, seed=7)
+    assert w.tolist() == [19, 13, 14, 18, 12, 201]
+    assert v.tolist() == [95, 26, 770, 36, 24, 1005]
+
+
+def test_skewed_extremes_actually_reach_the_top_of_their_ranges():
+    """极端值必须保留到接近取值上界，而不是被裁剪或压缩。
+
+    单个 n=200 抽样只有 k=10 个重项，最大值波动太大（逐种子最低只有 386），故跨
+    60 个种子聚合共 600 次重项抽样：U[200,500] 的 600 次最大值低于 490 的概率约
+    1.5e-9，U[30,60] 低于 57 的概率约 3.5e-28，两道门槛都远在噪声之外。
+
+    之所以必须另立一条：上面 `heavy.max() <= 500` 是**单边松界**，给重项加一个
+    `np.clip(x, hw_lo, 450)` 反而让它更容易满足——实测把上界压到 450 / 300 / 210，
+    其余 40 个测试全部照旧通过，而每个 skewed 实例的权重都会因此改变。
+    """
+    top_w = 0
+    top_d = 0
+    for seed in range(60):
+        w, v = generate_items("skewed", 200, seed=seed)
+        top_w = max(top_w, int(w.max()))
+        top_d = max(top_d, int((v // w).max()))
+    assert top_w >= 490
+    assert top_d >= 57
