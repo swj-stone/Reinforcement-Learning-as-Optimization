@@ -459,11 +459,22 @@ Expected: **6 passed, 3 failed**。失败的必须是这三个：
 
 **Files:**
 - Modify: `experiment/data/collect/clean.py`（补齐规则 5–9 与返回值）
-- Modify: `tests/test_cleaning.py`（追加测试）
+- Modify: `tests/test_cleaning.py`（删除一个过时用例，再追加测试）
 
-- [ ] **Step 1: 追加失败测试**
+- [ ] **Step 1: 删除过时用例，再追加失败测试**
 
-在 `tests/test_cleaning.py` 末尾追加：
+先删除 `tests/test_cleaning.py` 中的这个用例（任务二留下的脚手架，在文件中倒数第二个）：
+
+    def test_later_rules_do_not_fire_on_this_sample(dropped):
+        for rule in ("invalid_timestamp", "non_integer_quantity", "invalid_stock_code",
+                     "exact_duplicate_record", "zero_value_pence"):
+            assert dropped[rule] == 0, rule
+
+把它和它后面的空行一并删除，使前后两个用例之间恰好保留两个空行（PEP 8）。
+
+它断言规则 5–9 在样本上一律不触发，而这只在「这五条规则尚未实现」时成立；本任务恰好要实现它们，所以它必然变红。它编码的是当时的开发进度，不是系统的性质——按设计删除，不要改断言去迁就它。
+
+然后在同一文件末尾追加：
 ```python
 def test_invalid_timestamp_is_dropped(dropped):
     assert dropped["invalid_timestamp"] == 1
@@ -574,9 +585,12 @@ Expected: FAIL，`KeyError: 'invalid_timestamp'` 等
     # 这类批次对背包没有贡献，且会让价值为 0 的物品混进实例。
     value_pence = pd.Series(0, index=frame.index, dtype="int64")
     survivors = reason == ""
-    value_pence.loc[survivors] = [
-        to_pence(p, q) for p, q in zip(price.loc[survivors], quantity.loc[survivors])
-    ]
+    # 一个幸存者都没有时（空表，或被前序规则清空）右侧是空列表，
+    # 而向 int64 切片赋空列表会抛 LossySetitemError，所以必须先判空。
+    if survivors.any():
+        value_pence.loc[survivors] = [
+            to_pence(p, q) for p, q in zip(price.loc[survivors], quantity.loc[survivors])
+        ]
     mark(value_pence == 0, "zero_value_pence")
 
     # source_row_id 必须一起带出来：它是 lots_clean.csv 的首列，也是事后把
@@ -607,7 +621,7 @@ from experiment.data.spec import REQUIRED_COLUMNS, SOURCE_COLUMNS, STOCK_CODE_RE
 - [ ] **Step 4: 运行测试确认通过**
 
 Run: `venv\Scripts\python.exe -m pytest tests/test_cleaning.py -v`
-Expected: 20 passed
+Expected: **19 passed**（任务二留下的 8 个 + 本任务新增的 11 个）。若仍有一个 `test_later_rules_do_not_fire_on_this_sample` 失败，说明 Step 1 里那个过时用例还没删。
 
 - [ ] **Step 5: 全套测试**
 
