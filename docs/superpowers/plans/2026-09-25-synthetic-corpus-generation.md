@@ -1424,7 +1424,6 @@ from experiment.data.spec import (
     MAX_RESAMPLE_ATTEMPT,
     REPO_ROOT,
     SCHEMA_VERSION,
-    alpha_key,
     alpha_token,
     all_cells,
 )
@@ -1738,8 +1737,10 @@ Expected: FAIL，`AttributeError: module ... has no attribute 'write_cell'`
 
 - [ ] **Step 3: 写实现**
 
-先在 `experiment/data/generate/corpus.py` 顶部把 import 补齐：
+把 `experiment/data/generate/corpus.py` 顶部的 import 段**整体替换**为下面这段，不要追加：新增 `hashlib`、`platform`、`datetime` 与若干 spec 常量；Task 9 写的 `from __future__ import annotations` 保留；Task 9 一并写的 `alpha_key` 在本计划里全程无人使用（`seeds.py` 自己会 import），在此去掉。
 ```python
+from __future__ import annotations
+
 import hashlib
 import json
 import platform
