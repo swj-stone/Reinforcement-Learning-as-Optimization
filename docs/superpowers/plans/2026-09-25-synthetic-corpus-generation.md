@@ -961,12 +961,33 @@ def test_skewed_draw_order_is_frozen():
     w, v = generate_items("skewed", 6, seed=7)
     assert w.tolist() == [19, 13, 14, 18, 12, 201]
     assert v.tolist() == [95, 26, 770, 36, 24, 1005]
+
+
+def test_skewed_extremes_actually_reach_the_top_of_their_ranges():
+    """极端值必须保留到接近取值上界，而不是被裁剪或压缩。
+
+    单个 n=200 抽样只有 k=10 个重项，最大值波动太大（逐种子最低只有 386），故跨
+    60 个种子聚合共 600 次重项抽样：U[200,500] 的 600 次最大值低于 490 的概率约
+    1.5e-9，U[30,60] 低于 57 的概率约 3.5e-28，两道门槛都远在噪声之外。
+
+    之所以必须另立一条：上面 `heavy.max() <= 500` 是**单边松界**，给重项加一个
+    `np.clip(x, hw_lo, 450)` 反而让它更容易满足——实测把上界压到 450 / 300 / 210，
+    其余 40 个测试全部照旧通过，而每个 skewed 实例的权重都会因此改变。
+    """
+    top_w = 0
+    top_d = 0
+    for seed in range(60):
+        w, v = generate_items("skewed", 200, seed=seed)
+        top_w = max(top_w, int(w.max()))
+        top_d = max(top_d, int((v // w).max()))
+    assert top_w >= 490
+    assert top_d >= 57
 ```
 
 - [ ] **Step 2: 运行测试确认失败或通过**
 
 Run: `venv\Scripts\python.exe -m pytest tests/test_families.py -v`
-Expected: **40 passed**（Task 5 的 26 + 本步新增的 14）。若有 FAIL，最可能是 Task 4 的 `_skewed` 把两个索引集写成了同一组，回到 Task 4 修正——这是设计文档第 6 节点名的最易错处。若实际数量不是 40，如实报告实际数字，不要为了凑数字而增删测试。
+Expected: **41 passed**（Task 5 的 26 + 本步新增的 15）。若有 FAIL，最可能是 Task 4 的 `_skewed` 把两个索引集写成了同一组，回到 Task 4 修正——这是设计文档第 6 节点名的最易错处。若实际数量不是 41，如实报告实际数字，不要为了凑数字而增删测试。
 
 - [ ] **Step 3: Commit**
 
@@ -1105,7 +1126,7 @@ def _top_share(x: IntArray) -> float:
 - [ ] **Step 4: 运行测试确认通过**
 
 Run: `venv\Scripts\python.exe -m pytest tests/test_families.py -v`
-Expected: **51 passed**（Task 6 的 40 + 本步新增的 11）。若实际数量不是 51，如实报告实际数字，不要为了凑数字而增删测试。
+Expected: **52 passed**（Task 6 的 41 + 本步新增的 11）。若实际数量不是 52，如实报告实际数字，不要为了凑数字而增删测试。
 
 - [ ] **Step 5: Commit**
 
