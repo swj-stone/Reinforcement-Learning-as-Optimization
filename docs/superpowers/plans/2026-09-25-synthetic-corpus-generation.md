@@ -942,7 +942,15 @@ def test_skewed_heavy_densities_are_in_range():
 
 
 def test_skewed_keeps_extreme_observations():
-    """极端值必须保留：最大值远高于中位数，且没有任何缩尾痕迹。"""
+    """重项必须还在：数量恰好 k，且整体仍明显右偏（max/median > 10）。
+
+    本测试**测不出缩尾**，不要把它当缩尾的守卫：把 10 个重项的权重全压到区间
+    下界 200，本测试用的 seed=2225 上 max/median 仍是 19.05（> 10）、计数仍是
+    10，两条断言照旧全绿。它只能发现「重项被整体删除或替换成普通值」，而那
+    种情形 test_skewed_has_exactly_k_heavy_weights 已经先一步抓到，故它实际上
+    是计数断言的弱重复。真正守住缩尾的是
+    test_skewed_extremes_actually_reach_the_top_of_their_ranges。
+    """
     w, _ = generate_items("skewed", 200, seed=2225)
     assert w.max() / np.median(w) > 10
     assert int((w >= 200).sum()) == 10
