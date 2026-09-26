@@ -245,7 +245,7 @@ git commit -m "feat(data): UCI 采集常量与十进制分币换算"
 ## Task 2: 清洗流水线的前四条规则
 
 **Files:**
-- Modify: `experiment/data/collect/clean.py`（追加 `apply_cleaning` 骨架与前四条）
+- Modify: `experiment/data/collect/clean.py`（追加 `apply_cleaning` 骨架与前四条：规则 1 是 `source_row_id` 赋值，规则 2–4 是丢弃规则）
 - Create: `tests/test_cleaning.py`
 
 - [ ] **Step 1: 写失败测试**
@@ -455,7 +455,7 @@ Expected: **6 passed, 3 failed**。失败的必须是这三个：
 
 ---
 
-## Task 3: 后四条规则与总量恒等式
+## Task 3: 后五条规则与总量恒等式
 
 **Files:**
 - Modify: `experiment/data/collect/clean.py`（补齐规则 5–9 与返回值）
@@ -463,14 +463,14 @@ Expected: **6 passed, 3 failed**。失败的必须是这三个：
 
 - [ ] **Step 1: 删除过时用例，再追加失败测试**
 
-先删除 `tests/test_cleaning.py` 中的这个用例（任务二留下的脚手架，在文件中倒数第二个）：
+先删除 `tests/test_cleaning.py` 中的这个用例（任务二留下的脚手架，在文件中倒数第三个）：
 
     def test_later_rules_do_not_fire_on_this_sample(dropped):
         for rule in ("invalid_timestamp", "non_integer_quantity", "invalid_stock_code",
                      "exact_duplicate_record", "zero_value_pence"):
             assert dropped[rule] == 0, rule
 
-把它和它后面的空行一并删除，使前后两个用例之间恰好保留两个空行（PEP 8）。
+把它和它后面的两个空行一并删除，使前后两个用例之间恰好保留两个空行（PEP 8）。它前面已有两个空行，删掉后面那组才刚好剩下一组。
 
 它断言规则 5–9 在样本上一律不触发，而这只在「这五条规则尚未实现」时成立；本任务恰好要实现它们，所以它必然变红。它编码的是当时的开发进度，不是系统的性质——按设计删除，不要改断言去迁就它。
 
