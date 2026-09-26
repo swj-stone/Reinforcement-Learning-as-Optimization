@@ -68,3 +68,39 @@ def build_instance(
         "values": values.tolist(),
         "weights": weights.tolist(),
     }
+
+
+def build_cell(
+    split: str,
+    family: str,
+    n: int,
+    alpha: float,
+    quota: int,
+    seen: set[str],
+    max_attempt: int = MAX_RESAMPLE_ATTEMPT,
+) -> list[dict]:
+    """构造一个 cell 的全部实例，并就地更新跨 split 的已用哈希集合。
+
+    哈希冲突时递增 ``attempt`` 重派生，直到哈希未被占用。配额不因重抽改变：
+    重抽只换实例内容，不减少条数。
+
+    Raises:
+        RuntimeError: ``attempt`` 超过 ``max_attempt`` 仍未取得唯一哈希。
+            宁可报错也不死循环。
+    """
+    instances: list[dict] = []
+    for index in range(quota):
+        attempt = 0
+        while True:
+            instance = build_instance(split, family, n, alpha, index, attempt)
+            if instance["canonical_hash"] not in seen:
+                break
+            attempt += 1
+            if attempt > max_attempt:
+                raise RuntimeError(
+                    f"resample exceeded {max_attempt} attempts for "
+                    f"{split}/{family}/n={n}/alpha={alpha}/index={index}"
+                )
+        seen.add(instance["canonical_hash"])
+        instances.append(instance)
+    return instances
