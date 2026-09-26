@@ -101,3 +101,68 @@ def test_capacity_of_alpha_one_equals_total_weight():
 def test_unknown_family_raises():
     with pytest.raises(KeyError):
         generate_items("nope", 20, seed=1)
+
+
+def test_normal_is_clipped_to_1_100():
+    w, v = generate_items("normal", N_REPEAT, seed=4242)
+    assert w.min() >= 1 and w.max() <= 100
+    assert v.min() >= 1 and v.max() <= 100
+
+
+def test_normal_is_centred_near_50():
+    w, _ = generate_items("normal", N_REPEAT, seed=4243)
+    assert 48.0 <= w.mean() <= 52.0
+
+
+def test_normal_reaches_both_clip_bounds():
+    """正态(50,15)在 20 万次抽样里必然越过两侧边界，否则裁剪没被触发。"""
+    w, _ = generate_items("normal", N_REPEAT_BIG, seed=4244)
+    assert w.min() == 1
+    assert w.max() == 100
+
+
+def test_correlated_v_equals_max_one_w_plus_e():
+    """v - w 就是未被抬升时的 e，其范围必须落在 [-10, 10]。"""
+    w, v = generate_items("correlated", N_REPEAT, seed=555)
+    diff = v - w
+    assert diff.min() >= -10
+    assert diff.max() <= 10
+
+
+def test_correlated_weights_span_full_range():
+    w, _ = generate_items("correlated", N_REPEAT, seed=556)
+    assert w.min() == 1 and w.max() == 100
+
+
+def test_correlated_hits_the_floor_of_one():
+    """w=1 时 w+e 可低至 -9，v 必须被抬到 1，且永远不低于 1。"""
+    w, v = generate_items("correlated", N_REPEAT, seed=557)
+    assert (v >= 1).all()
+    assert (v == 1).any()
+    # w=1 处 e 取遍 [-10,10]，故 v = max(1, 1+e) 只能落在 [1, 11]
+    assert v[w == 1].min() >= 1
+    assert v[w == 1].max() <= 11
+
+
+def test_normal_draw_order_is_frozen():
+    """w 先抽、v 后抽。二者同分布、完全可交换，所以边界、中心、裁剪三处断言
+    在顺序颠倒后全部照旧通过——只有硬编码值守得住。
+
+    期望值按规格文本独立重算（normal(50,15) -> half-up -> clip[1,100]），
+    不是把实现跑一遍抄下来。
+    """
+    w, v = generate_items("normal", 6, seed=7)
+    assert w.tolist() == [50, 54, 46, 37, 43, 35]
+    assert v.tolist() == [51, 70, 43, 41, 57, 55]
+
+
+def test_correlated_formula_is_frozen():
+    """v = max(1, w + e)，且 w 先抽、e 后抽。
+
+    必须把 v 的值也写死：e 对称于 0，故 w - e 的分布与 w + e 完全相同，
+    「差落在 [-10,10]」与「能触到 1」两条断言对减号照样全绿，w 更是一字不变。
+    这正是本测试名断言的 "+e" 唯一被守住的地方。
+    """
+    w, v = generate_items("correlated", 6, seed=7)
+    assert w.tolist() == [95, 63, 69, 90, 58, 78]
+    assert v.tolist() == [102, 57, 60, 86, 53, 86]
