@@ -95,10 +95,12 @@ tests/
 ```
 derive_seed(split, family, n, alpha, index, attempt, stream) -> uint64
   = int.from_bytes(
-      blake2b(f"{split}|{family}|{n}|{alpha}|{index}|{attempt}|{stream}".encode(),
+      blake2b(f"{split}|{family}|{n}|{alpha_key(alpha)}|{index}|{attempt}|{stream}".encode(),
               digest_size=8).digest(),
       "big")
 ```
+
+`alpha` 不是裸插值，而是先经 `alpha_key(alpha)` 归一为两位小数字符串：裸 `str(0.1 + 0.2)` 是 `"0.30000000000000004"`，会与 `str(0.3)` 派生出两个不同的种子——归一化让二者落到同一个键上。实现见 `experiment/data/spec.py` 的 `alpha_key`。
 
 `stream ∈ {"items", "order"}`：`"items"` 用于抽权重与价值/参数，`"order"` 用于抽物品排列。**两条流相互隔离**，所以将来在 `"items"` 流里增减一次抽样不会改变已冻结语料中任何实例的物品顺序。
 
