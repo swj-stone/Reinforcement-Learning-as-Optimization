@@ -1409,6 +1409,6 @@ Get-Content datasets\raw\real\collect_report.json | ConvertFrom-Json |
 
 ## 与设计文档的两处实现细节说明
 
-1. **规则 8 的比较范围**：设计文档写"rule 8 = exact full-record dupes, keep smallest `source_row_id`"，未言明比较范围。本计划按**顺序流水线**语义实现——规则 8 只在规则 2–7 的幸存者之间比较。理由：设计文档第 9 节称这些是"9 ordered rules"，而有序清洗流水线的标准含义就是每条规则作用于上一条的输出。`test_duplicate_is_judged_among_survivors_only` 把这个选择钉死。
+1. **规则 8 的比较范围**：设计文档写"rule 8 = exact full-record dupes, keep smallest `source_row_id`"，未言明比较范围。本计划按**顺序流水线**语义实现——规则 8 只在规则 2–7 的幸存者之间比较。理由：设计文档第 9 节称这些是"9 ordered rules"，而有序清洗流水线的标准含义就是每条规则作用于上一条的输出。设计文档未言明比较范围因此无害：**两种读法在本规则集下必然等价**——规则 2–7 都是 `SOURCE_COLUMNS` 之内各列的逐行函数，所以逐字段相同的两行必然同生共死，一个幸存行不可能与一个已被丢弃的行互为重复，规则 8 里的 `alive = reason == ""` 掩码因此是恒等操作。已实测：把规则 8 换成对整个原始表做 `duplicated`，全套测试依旧全绿，且在 800 个随机表上两种写法的归因报告逐字节相同。按流水线语义书写仍然更好——它表达了流水线本意，且若某天有规则改用 `SOURCE_COLUMNS` 之外的列，这个选择会立刻变得可观测。另外，`test_duplicate_is_judged_among_survivors_only` 并没有钉死这个选择（它做不到）：该用例构造的两行都是取消发票且数量为负，规则 2 已把它们一并丢弃，所以它的三条断言与规则 8 的行为无关；用例名与 docstring 声称的性质无法被它检验。
 
 2. **`collect/cli.py` 为新增文件**：设计文档第 3 节的模块布局只列了 `collect/download.py` 与 `collect/clean.py`。为对齐 `generate/cli.py` 并满足"两个入口点相互独立"，本计划增加 `collect/cli.py` 与 `collect/run.py`（编排层）。这是布局的补充，不与设计冲突。
