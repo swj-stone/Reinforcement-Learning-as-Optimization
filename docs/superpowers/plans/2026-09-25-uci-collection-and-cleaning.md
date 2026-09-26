@@ -89,12 +89,12 @@ def test_uses_half_up_not_bankers():
 def test_uses_decimal_not_binary_float():
     """本测试是 Decimal 语义的判别式。
 
-    2.675 的二进制表示略小于 2.675，浮点路径 2.675*100 = 267.49999999999997，
-    floor(+0.5) 得 267；十进制路径 Decimal("2.675")*100 = 267.5，half-up 得 268。
+    1.005 的二进制表示略小于 1.005，浮点路径 1.005*100 = 100.49999999999999，
+    floor(+0.5) 得 100；十进制路径 Decimal("1.005")*100 = 100.5，half-up 得 101。
     若本测试失败，说明实现退回了浮点运算。
     """
-    assert to_pence(2.675, 1) == 268
-    assert math.floor(2.675 * 1 * 100 + 0.5) == 267
+    assert to_pence(1.005, 1) == 101
+    assert math.floor(1.005 * 1 * 100 + 0.5) == 100
 
 
 def test_accepts_numpy_scalars():
@@ -211,9 +211,9 @@ _HUNDRED = Decimal(100)
 def to_pence(unit_price, quantity) -> int:
     """``round_half_up(unit_price * quantity * 100)``，全程十进制。
 
-    刻意不走浮点：2.675 的二进制表示略小于 2.675，浮点路径会得到
-    267.49999999999997 而被舍成 267 分，十进制路径得到准确的 267.5 而进位为
-    268 分。这类偏差在几十万行的合计里会累积成可观测的差。
+    刻意不走浮点：1.005 的二进制表示略小于 1.005，浮点路径会得到
+    100.49999999999999 而被舍成 100 分，十进制路径得到准确的 100.5 而进位为
+    101 分。这类偏差在几十万行的合计里会累积成可观测的差。
 
     Args:
         unit_price: 单价，英镑。接受 float / numpy 浮点 / 字符串数字。
