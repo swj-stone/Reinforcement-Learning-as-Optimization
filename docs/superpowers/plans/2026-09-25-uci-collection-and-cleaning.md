@@ -1341,7 +1341,24 @@ $r.cleaning.dropped_by_reason.PSObject.Properties |
   ForEach-Object { "  {0}: {1}" -f $_.Name, $_.Value }
 "恒等式: $($r.cleaning.identity_holds)"
 ```
-Expected: 恒等式为 True。逐规则数量应满足常识——`cancellation_invoice` 在 8000～10000 量级（原数据约有 9288 条取消发票），`nonpositive_quantity_or_price` 在数千量级，`exact_duplicate_record` 在数千量级，`zero_value_pence` 在数十量级。若某一项为 0 或异常巨大，停下来排查该规则，不要直接接受结果。
+Expected: 恒等式为 True。真实工作簿上的逐规则计数是**确定值**，不是量级（2026-09-26 实测，工作簿 23715344 字节，sha256 `43465a06f2ccf7c8b5bd2892bc7defb52f97487934fe93b16ae4c3936424676d`）：
+
+| 规则 | 丢弃行数 |
+| --- | ---: |
+| `cancellation_invoice` | 9288 |
+| `nonpositive_quantity_or_price` | 2517 |
+| `missing_required_field` | 0 |
+| `invalid_timestamp` | 0 |
+| `non_integer_quantity` | 0 |
+| `invalid_stock_code` | 2379 |
+| `exact_duplicate_record` | 5221 |
+| `zero_value_pence` | 0 |
+
+合计丢弃 19405 行，`raw_rows` = 541909，`kept_rows` = 522504。
+
+**四条为 0 是正常的，看到 0 不要去排查**：`missing_required_field` 为 0，是因为源表在五个必需列上没有缺失值（常缺的 `CustomerID` 与 `Description` 刻意不在必需之列）；`invalid_timestamp` 为 0，是因为 `pd.read_excel` 已把 `InvoiceDate` 读成 `datetime64`，规则 5 在这条读取路径上不可能触发（它防的是文本日期）；`non_integer_quantity` 为 0，是因为 `Quantity` 读进来就是 `int64`；`zero_value_pence` 为 0，是因为没有幸存批次的换算结果落到 0 分。
+
+**真正的停下信号**是：任何一项与上表不符、恒等式不成立，或 `kept_rows` 不等于 522504。计数依赖工作簿字节——若 UCI 换了文件，`UCI_XLSX_BYTES` 会先失败。
 
 - [ ] **Step 3: 幸存数据的形态检查**
 
