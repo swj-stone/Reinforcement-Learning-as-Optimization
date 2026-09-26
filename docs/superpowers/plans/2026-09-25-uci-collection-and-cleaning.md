@@ -1018,22 +1018,29 @@ def test_read_workbook_has_the_source_columns():
     assert len(frame) > 500_000
 
 
-def test_run_collection_writes_all_four_artifacts(tmp_path):
+def test_run_collection_writes_the_outputs_of_a_supplied_workbook(tmp_path):
+    """传了 workbook 就不下载，因此只落盘清洗产物与审计报告。
+
+    四个文件齐全的形态属于下载路径：那时 ensure_workbook 会把 zip 与 xlsx
+    一并写进同一个 out_dir（Task 8 用 CLI 验收这一点）。本文件刻意走离线
+    路径，所以不该要求那两个下载件——build_report 里 zip_sha256 允许为
+    None，正是为这条路径留的。
+    """
     report = run_collection(out_dir=tmp_path, workbook=WORKBOOK)
-    for name in ("online_retail.zip", UCI_XLSX_NAME, "lots_clean.csv", "collect_report.json"):
+    for name in ("lots_clean.csv", "collect_report.json"):
         assert (tmp_path / name).is_file(), name
     assert report["kept_rows"] > 0
 
 
 def test_report_identity_holds(tmp_path):
     report = run_collection(out_dir=tmp_path, workbook=WORKBOOK)
-    dropped = sum(report["dropped_by_reason"].values())
+    dropped = sum(report["cleaning"]["dropped_by_reason"].values())
     assert report["raw_rows"] == report["kept_rows"] + dropped
 
 
 def test_report_rule_keys_are_complete(tmp_path):
     report = run_collection(out_dir=tmp_path, workbook=WORKBOOK)
-    assert tuple(report["dropped_by_reason"]) == CLEANING_RULES
+    assert tuple(report["cleaning"]["dropped_by_reason"]) == CLEANING_RULES
 
 
 def test_report_records_source_provenance(tmp_path):
