@@ -43,12 +43,24 @@ def test_changing_one_value_changes_the_hash():
     assert canonical_hash(4, 5, W, other) != canonical_hash(4, 5, W, V)
 
 
-def test_duplicate_pairs_are_order_insensitive():
-    """出现重复 (w, v) 对时，排序后仍应稳定。"""
+def test_duplicate_pairs_are_preserved_not_collapsed():
+    """重复的 (w, v) 对必须逐条进入载荷，不能被折叠去重。
+
+    ``set(zip(...))`` 之类"顺手去重"的写法会让 (2,7) 的两个副本塌成一个，多重集
+    {(2,7)x2, (5,1)} 与 {(2,7), (5,1)x2} 于是撞成同一个哈希，跨 split 去重会把
+    两个不同的实例误判为重复；已生成语料里每条含重复对的 canonical_hash 也都会
+    变。该项改动能骗过上面全部关系型断言，连两条字面值测试也骗得过——它们的数据
+    里 (w, v) 对互不重复，折叠后载荷不变。整数权重与取值下重复对很常见，故此处
+    既钉字面值，又直接断言"多重集不同则哈希不同"。期望值按 7.1 节公式独立算出。
+    """
     w = np.array([2, 2, 5], dtype=np.int64)
     v = np.array([7, 7, 1], dtype=np.int64)
-    perm = np.array([1, 2, 0])
-    assert canonical_hash(3, 4, w[perm], v[perm]) == canonical_hash(3, 4, w, v)
+    assert canonical_hash(3, 4, w, v) == (
+        "10c828476a7a70816109cfb60888b8458480b04282d057a9e6edb20533b11888"
+    )
+    w2 = np.array([2, 5, 5], dtype=np.int64)
+    v2 = np.array([7, 1, 1], dtype=np.int64)
+    assert canonical_hash(3, 4, w2, v2) != canonical_hash(3, 4, w, v)
 
 
 def test_hash_golden_pins_the_payload_format():
@@ -69,11 +81,12 @@ def test_hash_golden_pins_the_payload_format():
 def test_reordering_is_order_insensitive_when_values_tie():
     """两条 v 相同、w 不同的对，必须按 (w, v) 全序排，而不是只按 v 排。
 
-    test_reordering_items_does_not_change_the_hash 的数据里有一对 w 相同
-    （w=1 出现两次，v 分别是 20 与 40），所以只按 w 排序会被它抓住；但整组测试
-    没有任何 v 相同的对，只按 v 排序（``key=lambda t: t[1]``）会全绿。v 相同时
-    的相对次序会退回输入顺序，物品重排的副本于是得到不同哈希——正是 7.1 节要
-    消除的情形。字面值同样按 7.1 节公式独立算出，顺带钉住并列时的排序方向。
+    v 相同时，只按 v 排序的相对次序会退回输入顺序，物品重排的副本于是得到不同
+    哈希——正是 7.1 节要消除的情形。test_hash_golden_pins_the_payload_format
+    其实也能间接抓住"只按 v 排序"（该数据按 v 排会得到 ``3,10;1,20;4,30;1,40``，
+    与钉住的载荷不同）；本测试的差别在于第一条断言直接检验"重排不变"这一语义
+    本身，不依赖字节比对，失败信息也更直白。字面值同样按 7.1 节公式独立算出，
+    顺带钉住并列时的排序方向。
     """
     w = np.array([3, 1], dtype=np.int64)
     v = np.array([5, 5], dtype=np.int64)
