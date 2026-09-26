@@ -55,8 +55,9 @@ REAL_DIR: Path = DATASETS_RAW / "real"
 def alpha_key(alpha: float) -> str:
     """容量比的稳定字符串键，用于种子派生。
 
-    显式格式化为两位小数，避免 ``str(0.5) == "0.5"`` 与 ``str(0.50) == "0.5"``
-    之类由浮点表示差异引起的键不一致。
+    显式格式化为两位小数，使「本应相同、却因浮点运算而近似」的两个值落到同一个
+    键上：``0.1 + 0.2`` 的 ``repr`` 是 ``0.30000000000000004``，直接 ``str()``
+    会与 ``0.3`` 派生出两个不同的种子，``f"{...:.2f}"`` 则都得到 ``0.30``。
     """
     return f"{alpha:.2f}"
 
@@ -80,9 +81,12 @@ def cell_filename(family: str, n: int, alpha: float) -> str:
 
 
 def all_cells() -> list[tuple[str, int, float]]:
-    """按冻结顺序枚举所有 cell。
+    """按冻结顺序枚举全部 48 个 cell。
 
-    顺序即去重时的判定顺序，是冻结语义的一部分：先 train、后 validation、
-    最后 test。改动顺序会改变哪些实例被重抽。
+    顺序即去重时的判定顺序，是冻结语义的一部分：family 在外层、n 居中、alpha
+    在内层（即下方列表推导的嵌套序）。改动这个嵌套序会改变哪些实例被重抽。
+
+    注意本函数不含 split 维度：先 train、后 validation、最后 test 的遍历顺序由
+    ``generate`` 模块的去重循环负责，不在返回值里。
     """
     return [(f, n, a) for f in FAMILIES for n in SIZES for a in ALPHAS]
