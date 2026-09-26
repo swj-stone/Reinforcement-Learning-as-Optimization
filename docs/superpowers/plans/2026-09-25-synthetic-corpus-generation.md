@@ -853,7 +853,7 @@ def test_correlated_formula_is_frozen():
 - [ ] **Step 2: 运行测试**
 
 Run: `venv\Scripts\python.exe -m pytest tests/test_families.py -v`
-Expected: **26 passed**（Task 4 的 18 + 本步新增的 8）。实现已在 Task 4 写好；若有 FAIL，多半是 Task 4 的实现有误，回到 Task 4 修正——但两个金样本失败意味着**抽样次序**被改了，那是另一类错误。若实际数量不是 26，如实报告实际数字，不要为了凑数字而增删测试。
+Expected: **26 passed**（Task 4 的 18 + 本步新增的 8）。实现已在 Task 4 写好；若有 FAIL，多半是 Task 4 的实现有误，回到 Task 4 修正——但两个金样本失败意味着**冻结语义**被改了，那是另一类错误：`normal` 金样本对应抽样次序颠倒，`correlated` 金样本则连「`w + e` 被写成 `w - e`」这种纯公式改动也会红（符号一翻，w 一字不变而 v 全变）。若实际数量不是 26，如实报告实际数字，不要为了凑数字而增删测试。
 
 - [ ] **Step 3: Commit**
 
