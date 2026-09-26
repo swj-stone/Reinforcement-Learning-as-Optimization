@@ -1353,7 +1353,7 @@ $lots = Import-Csv datasets\raw\real\lots_clean.csv
 "最大单批价值(分): $(($lots | Measure-Object value_pence -Maximum).Maximum)"
 "日期范围: $(($lots | Measure-Object invoice_date -Minimum).Minimum) ~ $(($lots | Measure-Object invoice_date -Maximum).Maximum)"
 ```
-Expected: 数量最小值 ≥ 1（正整数，无 0 无负）；最大单批价值应是六位数（原数据最大单批为 168469.6 英镑）——**极端值必须保留，不得缩尾**；日期范围应落在 2010-12-01 至 2011-12-09 之间。
+Expected: 数量最小值 ≥ 1（正整数，无 0 无负）；最大单批价值应是八位数（全表最大单批为 80995 × 2.08 = 168469.6 英镑，即 16846960 分）——**极端值必须保留，不得缩尾**；日期范围应落在 2010-12-01 至 2011-12-09 之间。
 
 - [ ] **Step 4: 幂等性验收**
 
