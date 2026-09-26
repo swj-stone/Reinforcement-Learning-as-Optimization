@@ -853,7 +853,13 @@ def test_correlated_formula_is_frozen():
 - [ ] **Step 2: 运行测试**
 
 Run: `venv\Scripts\python.exe -m pytest tests/test_families.py -v`
-Expected: **26 passed**（Task 4 的 18 + 本步新增的 8）。实现已在 Task 4 写好；若有 FAIL，多半是 Task 4 的实现有误，回到 Task 4 修正——但两个金样本失败意味着**冻结语义**被改了，那是另一类错误：`normal` 金样本对应抽样次序颠倒，`correlated` 金样本则连「`w + e` 被写成 `w - e`」这种纯公式改动也会红（符号一翻，w 一字不变而 v 全变）。若实际数量不是 26，如实报告实际数字，不要为了凑数字而增删测试。
+Expected: **26 passed**（Task 4 的 18 + 本步新增的 8）。实现已在 Task 4 写好；若有 FAIL，多半是 Task 4 的实现有误，回到 Task 4 修正。金样本红属于另一类错误，而且**红几个本身就是诊断线索**（以下四种情形均已实测）：
+- 只有 `normal` 金样本红 → `_normal` 内部的抽样次序被颠倒；
+- 只有 `correlated` 金样本红 → 该族公式被改（如 `w + e` 写成 `w - e`；符号一翻，w 一字不变而 v 全变，所以别指望「差落在 [-10,10]」之类的断言会发现）；
+- **连同 Task 4 的 `uniform` 金样本一起红 → `generate_items` 里的 rng 构造或种子派生被改了**（三族金样本都用 seed=7，共享管线的任何改动都会同时打穿三个）；
+- 非金样本断言红而金样本绿 → 边界/裁剪/退化路径一类的问题，与冻结语义无关。
+
+若实际数量不是 26，如实报告实际数字，不要为了凑数字而增删测试。
 
 - [ ] **Step 3: Commit**
 
