@@ -783,7 +783,7 @@ git commit -m "feat(data): half-up 取整、容量公式与 uniform 族"
 
 - [ ] **Step 1: 追加失败测试**
 
-在 `tests/test_families.py` 末尾追加：
+在 `tests/test_families.py` 末尾追加（**块前恰好两个空行**，与文件内既有顶层定义的间隔一致；追加后文件应精确等于「原内容 + 两个换行 + 本块」，一个换行都不能多或少）：
 ```python
 def test_normal_is_clipped_to_1_100():
     w, v = generate_items("normal", N_REPEAT, seed=4242)
@@ -871,7 +871,7 @@ git commit -m "test(data): 锁定 normal 与 correlated 族的公式与边界"
 
 - [ ] **Step 1: 追加失败测试**
 
-在 `tests/test_families.py` 末尾追加：
+在 `tests/test_families.py` 末尾追加（**块前恰好两个空行**，与文件内既有顶层定义的间隔一致；追加后文件应精确等于「原内容 + 两个换行 + 本块」，一个换行都不能多或少）：
 ```python
 @pytest.mark.parametrize("n, k", [(20, 1), (50, 3), (100, 5), (200, 10)])
 def test_skewed_has_exactly_k_heavy_weights(n, k):
@@ -967,7 +967,7 @@ git commit -m "test(data): 锁定 skewed 族的稀有索引、独立性与极端
 
 - [ ] **Step 1: 追加失败测试**
 
-在 `tests/test_families.py` 末尾追加：
+在 `tests/test_families.py` 末尾追加（**块前恰好两个空行**，与文件内既有顶层定义的间隔一致；追加后文件应精确等于「原内容 + 两个换行 + 本块」，一个换行都不能多或少）：
 ```python
 from experiment.data.generate.families import compute_stats
 
@@ -1059,7 +1059,7 @@ Expected: FAIL，`ImportError: cannot import name 'compute_stats'`
 
 - [ ] **Step 3: 写实现**
 
-在 `experiment/data/generate/families.py` 的 `capacity_for` 之后、`# --- 各族实现` 之前插入：
+在 `experiment/data/generate/families.py` 的 `capacity_for` 之后、`# --- 各族实现` 之前插入（**前后各恰好两个空行**，与文件内既有顶层定义及注释段的间隔一致）：
 ```python
 def compute_stats(weights: IntArray, values: IntArray) -> dict[str, float]:
     """描述实例的分布形态，供 EXPERIMENT_PLAN.md 第 8 节 E2 的分解使用。
