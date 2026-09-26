@@ -534,8 +534,10 @@ from experiment.data.generate.families import (
 )
 
 N_REPEAT = 2000
-#: 用于验证正态族两侧裁剪确实被触发：N(50,15) 越过 [1,100] 的概率约 5e-4，
-#: 2000 次抽样有约 1/3 的概率一次都不越界，必须放大样本才能稳定断言。
+#: 用于验证正态族两侧裁剪确实被触发。判据是**取整之后**的值，故门槛落在两个半
+#: 整数上，而不是边界本身：`max == 100` 要求原始抽样 >= 99.5（概率 4.83e-4），
+#: `min == 1` 要求 < 1.5（概率 6.12e-4）。单个 2000 抽样的样本至少缺一侧的概率
+#: 约 0.5625（蒙特卡洛实测 0.556），必须放大样本才能稳定断言。
 N_REPEAT_BIG = 200_000
 
 
@@ -659,7 +661,7 @@ from experiment.data.spec import (
 IntArray = np.ndarray
 
 
-def round_half_up(x):
+def round_half_up(x: float | IntArray) -> int | IntArray:
     """四舍五入（.5 进位），接受标量或数组。
 
     刻意不用 ``np.rint``：后者是银行家舍入，把 2.5 舍为 2。设计文档第 6 节
@@ -1027,6 +1029,27 @@ def test_skewed_has_larger_top5_share_than_uniform():
         compute_stats(sw, sw)["top5_weight_share"]
         > compute_stats(uw, uw)["top5_weight_share"]
     )
+
+
+def test_stats_golden_values_pin_every_statistic():
+    """六项全部写死为字面量。
+
+    上面所有断言都传 (x, x)——权重与价值是同一个数组，所以把两项对调后全部
+    照旧通过。而唯一的 max_over_median 断言用的是常量数组，那里 mean 恒等于
+    median，测试名里的 "median" 同样守不住。
+
+    期望值按设计文档 8.1 节的表格独立算出，不是把实现跑一遍抄下来（本步之前
+    compute_stats 尚不存在）。skewed 族 n=50 时 median(w)=9.5 而 mean(w)=34.98，
+    相差近四倍，故对 median->mean 的替换敏感：max/median 会从 52.1 掉到 14.3。
+    """
+    w, v = generate_items("skewed", 50, seed=5)
+    stats = compute_stats(w, v)
+    assert stats["top5_weight_share"] == pytest.approx(0.7381360777587193)
+    assert stats["top5_value_share"] == pytest.approx(0.5764466315968098)
+    assert stats["max_over_median_weight"] == pytest.approx(52.10526315789474)
+    assert stats["max_over_median_value"] == pytest.approx(53.035714285714285)
+    assert stats["cv_weight"] == pytest.approx(2.9220023217743236)
+    assert stats["cv_value"] == pytest.approx(2.496525662188181)
 ```
 
 - [ ] **Step 2: 运行测试确认失败**
@@ -1063,7 +1086,7 @@ def _top_share(x: IntArray) -> float:
 - [ ] **Step 4: 运行测试确认通过**
 
 Run: `venv\Scripts\python.exe -m pytest tests/test_families.py -v`
-Expected: 全部 PASS
+Expected: **51 passed**（Task 6 的 40 + 本步新增的 11）。若实际数量不是 51，如实报告实际数字，不要为了凑数字而增删测试。
 
 - [ ] **Step 5: Commit**
 
