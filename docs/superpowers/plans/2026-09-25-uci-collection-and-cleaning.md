@@ -438,15 +438,16 @@ def _as_code_string(series: pd.Series) -> pd.Series:
     return text.mask(integral, as_int)
 ```
 
-- [ ] **Step 4: 运行测试，确认只有预期的两个失败**
+- [ ] **Step 4: 运行测试，确认失败恰好是预期的三个**
 
 Run: `venv\Scripts\python.exe -m pytest tests/test_cleaning.py -v`
-Expected: **7 passed, 2 failed**。失败的必须是这两个：
+Expected: **6 passed, 3 failed**。失败的必须是这三个：
 
-- `test_later_rules_do_not_fire_on_this_sample` — `KeyError: 'invalid_timestamp'`，因为报告尚无后四条规则的键
-- `test_report_keys_are_the_frozen_rules` — 报告键不全，`kept_rows` 也还是占位的 0
+- `test_source_row_id_is_the_original_position` — 此刻幸存者仍是 `[0, 1, 5, 7, 8, 9, 10, 11, 12]`。样本第 7–12 行只有规则 5–9 才拦得住，而本任务只实现规则 2–4，所以它们仍然被保留
+- `test_later_rules_do_not_fire_on_this_sample` — `KeyError: 'invalid_timestamp'`，因为报告尚无规则 5–9 的键
+- `test_report_keys_are_the_frozen_rules` — 报告键不全（此时只有 3 个），`kept_rows` 也还是 9 而不是 3
 
-其余 7 个（三条归因、CustomerID 不算缺失、source_row_id 保序、空表处理）必须已经通过。**若失败的不是这两个，先停下来排查，不要继续。**
+其余 6 个（四条归因、CustomerID 不算缺失、空表处理）必须已经通过。**若失败的不是这三个，先停下来排查，不要继续。**
 
 - [ ] **Step 5: 暂不提交**
 
