@@ -742,8 +742,12 @@ def pools_by_split(
 
     **桶键是发票的最早日期，不是批次自己的 ``invoice_date``**（第 4 节 /
     设计文档 6.1：全部 lot 随发票走）。跨午夜的发票两笔都要落进「最早那天」
-    的池子；若按批次自己的日期分桶，池键就会与 ``date_splits`` 的日期集合
-    脱节，``eligible`` 会报出这个 split 并不拥有的日期。
+    的池子。
+
+    按批次自己的日期分桶会同时坏掉两件事：池键与 ``date_splits`` 的日期集合
+    脱节，``eligible`` 会报出这个 split 并不拥有的日期；更要紧的是**同一张
+    发票的 lot 会落进两个不同的 split**——设计文档 6.2 明令「任何源行或发票
+    不得跨 split」，而整票切分正是靠这里的分桶保证的。
 
     行序是冻结语义：抽样用 rng 在池内取下标，池的顺序一变，抽出的批次就变。
     """
@@ -1865,14 +1869,18 @@ CELL = (20, 0.25)
 #: cell 级的配额是**标量**。``assemble_split`` 的 ``synthetic_quota`` 是
 #: 「每个合成族每 cell 的条数」；夹具每个 cell 只提供 1 条，故取 1。
 #: ``real_quota`` 必须等于族数 × 每族条数，否则 50:50 闸门会报错。
-SYN_QUOTA = 1
-REAL_QUOTA = len(FAMILIES) * SYN_QUOTA
+#:
+#: 前缀 ``CELL_`` 是刻意加的：``spec.REAL_QUOTA``（= ``{"train": 500, …}``）说的是
+#: 「每个 split 的真实条数」，与本处的「每个 cell 4 条」同名而不同物，量级还差两个
+#: 数量级。不带前缀，读的人很容易把 4 当成 500。
+CELL_SYN_QUOTA = 1
+CELL_REAL_QUOTA = len(FAMILIES) * CELL_SYN_QUOTA
 
 #: run 级的配额是**按 split 索引的映射**，只给 ``run_assembly`` 用。
 #: 两个层级同名不同形，混用会让 ``read_cell(path)[:quota]`` 拿字典去切片。
 QUOTAS = {
-    "synthetic_quota": {split: SYN_QUOTA for split in spec.SPLITS},
-    "real_quota": {split: REAL_QUOTA for split in spec.SPLITS},
+    "synthetic_quota": {split: CELL_SYN_QUOTA for split in spec.SPLITS},
+    "real_quota": {split: CELL_REAL_QUOTA for split in spec.SPLITS},
 }
 
 
@@ -1911,7 +1919,7 @@ def test_synthetic_half_is_identical_to_the_generation_corpus(fixture_corpus, in
     代码而非已审计的语料。这条断言钉住后者。
     """
     source = M.read_cell(M.synthetic_cell_path(fixture_corpus, "train", "uniform", 20, 0.25))
-    merged, _ = M.assemble_split("train", index, fixture_corpus, cells=[CELL], synthetic_quota=SYN_QUOTA, real_quota=REAL_QUOTA)
+    merged, _ = M.assemble_split("train", index, fixture_corpus, cells=[CELL], synthetic_quota=CELL_SYN_QUOTA, real_quota=CELL_REAL_QUOTA)
     picked = [i for i in merged if i["instance_id"] == source[0]["instance_id"]]
     assert len(picked) == 1
     assert picked[0] == source[0]
@@ -1921,7 +1929,7 @@ def test_synthetic_half_is_identical_to_the_generation_corpus(fixture_corpus, in
 
 
 def test_cell_order_is_families_then_real(index, fixture_corpus):
-    merged, _ = M.assemble_split("train", index, fixture_corpus, cells=[CELL], synthetic_quota=SYN_QUOTA, real_quota=REAL_QUOTA)
+    merged, _ = M.assemble_split("train", index, fixture_corpus, cells=[CELL], synthetic_quota=CELL_SYN_QUOTA, real_quota=CELL_REAL_QUOTA)
     assert [i["source"] for i in merged] == ["synthetic"] * 4 + ["real"] * 4
     assert [i["family"] for i in merged[:4]] == list(FAMILIES)
     assert all(i["family"] is None for i in merged[4:])
@@ -1929,7 +1937,7 @@ def test_cell_order_is_families_then_real(index, fixture_corpus):
 
 def test_every_cell_is_fifty_fifty(index, fixture_corpus):
     _, cells = M.assemble_split(
-        "train", index, fixture_corpus, cells=[(20, 0.25), (20, 0.50)], synthetic_quota=SYN_QUOTA, real_quota=REAL_QUOTA
+        "train", index, fixture_corpus, cells=[(20, 0.25), (20, 0.50)], synthetic_quota=CELL_SYN_QUOTA, real_quota=CELL_REAL_QUOTA
     )
     assert len(cells) == 2
     for cell in cells:
@@ -1948,16 +1956,16 @@ def test_raises_when_the_two_sides_do_not_match(index, fixture_corpus):
 def test_real_instances_use_the_family_count_as_the_quota(index, fixture_corpus):
     """真实半边没有族维度，其条数必须等于合成半边（族数 × 每族条数）。
 
-    每族条数只能取 ``SYN_QUOTA``：夹具每个 cell 只有 1 条合成实例
+    每族条数只能取 ``CELL_SYN_QUOTA``：夹具每个 cell 只有 1 条合成实例
     （``run_generation(quota_override=1)``），要求 3 条就会先被 50:50 闸门拦下。
     两边都断言，才能同时钉住「合成半边真的按族数产出」与「真实半边对齐它」。
     """
     merged, _ = M.assemble_split(
         "train", index, fixture_corpus, cells=[CELL],
-        synthetic_quota=SYN_QUOTA, real_quota=len(FAMILIES) * SYN_QUOTA,
+        synthetic_quota=CELL_SYN_QUOTA, real_quota=len(FAMILIES) * CELL_SYN_QUOTA,
     )
-    assert sum(1 for i in merged if i["source"] == "synthetic") == len(FAMILIES) * SYN_QUOTA
-    assert sum(1 for i in merged if i["source"] == "real") == len(FAMILIES) * SYN_QUOTA
+    assert sum(1 for i in merged if i["source"] == "synthetic") == len(FAMILIES) * CELL_SYN_QUOTA
+    assert sum(1 for i in merged if i["source"] == "real") == len(FAMILIES) * CELL_SYN_QUOTA
 
 
 # --- 全局去重 ---------------------------------------------------------------
@@ -1965,7 +1973,7 @@ def test_real_instances_use_the_family_count_as_the_quota(index, fixture_corpus)
 
 def test_all_hashes_in_the_merged_output_are_unique(index, fixture_corpus):
     merged, _ = M.assemble_split(
-        "train", index, fixture_corpus, cells=[(20, 0.25), (20, 0.50)], synthetic_quota=SYN_QUOTA, real_quota=REAL_QUOTA
+        "train", index, fixture_corpus, cells=[(20, 0.25), (20, 0.50)], synthetic_quota=CELL_SYN_QUOTA, real_quota=CELL_REAL_QUOTA
     )
     hashes = [i["canonical_hash"] for i in merged]
     assert len(set(hashes)) == len(hashes)
@@ -1973,8 +1981,8 @@ def test_all_hashes_in_the_merged_output_are_unique(index, fixture_corpus):
 
 def test_seen_accumulates_across_cells_and_splits(index, fixture_corpus):
     seen: set[str] = set()
-    M.assemble_split("train", index, fixture_corpus, cells=[CELL], seen=seen, synthetic_quota=SYN_QUOTA, real_quota=REAL_QUOTA)
-    M.assemble_split("validation", index, fixture_corpus, cells=[CELL], seen=seen, synthetic_quota=SYN_QUOTA, real_quota=REAL_QUOTA)
+    M.assemble_split("train", index, fixture_corpus, cells=[CELL], seen=seen, synthetic_quota=CELL_SYN_QUOTA, real_quota=CELL_REAL_QUOTA)
+    M.assemble_split("validation", index, fixture_corpus, cells=[CELL], seen=seen, synthetic_quota=CELL_SYN_QUOTA, real_quota=CELL_REAL_QUOTA)
     assert len(seen) == 16
 
 
@@ -1983,7 +1991,7 @@ def test_synthetic_hash_colliding_with_seen_raises(index, fixture_corpus):
 
     传入上一次装配的全部哈希即可制造这种冲突——这条断言证明那道检查是活的。
     """
-    merged, _ = M.assemble_split("train", index, fixture_corpus, cells=[CELL], synthetic_quota=SYN_QUOTA, real_quota=REAL_QUOTA)
+    merged, _ = M.assemble_split("train", index, fixture_corpus, cells=[CELL], synthetic_quota=CELL_SYN_QUOTA, real_quota=CELL_REAL_QUOTA)
     with pytest.raises(ValueError, match="合成"):
         M.assemble_split(
             "train",
@@ -1991,7 +1999,7 @@ def test_synthetic_hash_colliding_with_seen_raises(index, fixture_corpus):
             fixture_corpus,
             cells=[CELL],
             seen={i["canonical_hash"] for i in merged},
-            synthetic_quota=SYN_QUOTA, real_quota=REAL_QUOTA,
+            synthetic_quota=CELL_SYN_QUOTA, real_quota=CELL_REAL_QUOTA,
         )
 
 
@@ -2077,7 +2085,7 @@ def test_upstream_provenance_reports_missing_files_as_none(tmp_path):
 
 
 def test_write_split_writes_lf_jsonl_and_returns_the_digest(index, fixture_corpus, tmp_path):
-    merged, _ = M.assemble_split("train", index, fixture_corpus, cells=[CELL], synthetic_quota=SYN_QUOTA, real_quota=REAL_QUOTA)
+    merged, _ = M.assemble_split("train", index, fixture_corpus, cells=[CELL], synthetic_quota=CELL_SYN_QUOTA, real_quota=CELL_REAL_QUOTA)
     path = tmp_path / "train" / "instances.jsonl"
     digest = M.write_split(path, merged)
     raw = path.read_bytes()
@@ -2088,7 +2096,7 @@ def test_write_split_writes_lf_jsonl_and_returns_the_digest(index, fixture_corpu
 
 
 def test_write_split_is_byte_identical_on_rerun(index, fixture_corpus, tmp_path):
-    merged, _ = M.assemble_split("train", index, fixture_corpus, cells=[CELL], synthetic_quota=SYN_QUOTA, real_quota=REAL_QUOTA)
+    merged, _ = M.assemble_split("train", index, fixture_corpus, cells=[CELL], synthetic_quota=CELL_SYN_QUOTA, real_quota=CELL_REAL_QUOTA)
     a, b = tmp_path / "a" / "instances.jsonl", tmp_path / "b" / "instances.jsonl"
     M.write_split(a, merged)
     M.write_split(b, merged)
@@ -2910,11 +2918,33 @@ def test_write_config_keeps_chinese_readable(tmp_path):
 cd "/c/work/学校/A.SPBU/Saint-peter-26/AI-2/project" && ./venv/Scripts/python.exe -m pytest tests/test_assemble_manifest.py -p no:cacheprovider --basetemp="$TEMP/ap_t6" -q 2>&1 | tail -4
 ```
 
-预期：**字段类的测试全部失败**（`KeyError: 'split_policy'`、`'streams'` 等，以及 config 的一整批 `KeyError`）。
+预期：**`12 failed, 6 passed`**（共 18 条；下面是实测的逐条分布，不是估计）。
 
-`test_write_manifest_*` 与 `test_write_config_*` 这几条**会直接通过**——写出函数
-在 Task 5 就已经定稿，本任务不动它们。这是预期的，不是"测试写错了"；实现者
-不必为让它们变红而改动任何东西。
+失败分三类：
+
+- **10 条是同一个 `TypeError: build_config() got an unexpected keyword argument 'requirements'`**
+  ——Task 5 交付的 `build_config(out_dir, generated_at)` 只有两个形参，而本任务的测试
+  要传第三个。**注意这不是 `KeyError`**：异常在进入任何字典之前就抛出了，所以
+  "config 的一整批 `KeyError`" 这种读法在本状态下根本不可达。8 条 `test_config_*`
+  加 `test_write_config_roundtrips_as_yaml`、`test_write_config_is_byte_stable_and_sorts_keys`
+  都走 `_config()` 助手，因而全部撞在这一个 `TypeError` 上。
+- **1 条 `AssertionError`**：`test_manifest_has_the_sections_the_plan_requires` 的集合
+  比较报 `Extra items in the right set: 'split_policy', 'splits', 'streams', 'output_dir'`
+  ——是缺键的集合断言，不是 `KeyError: 'split_policy'`。
+- **1 条 `KeyError: 'streams'`**：`test_streams_record_both_the_key_and_the_declared_master_seed`。
+
+**会通过的 6 条，与失败的一样重要**，别以为"字段类全红"就对了：
+
+- `test_write_manifest_uses_lf_and_no_bom`、`test_write_manifest_is_byte_stable_for_the_same_input`
+  ——写出函数在 Task 5 已定稿，本任务不动它们；
+- `test_manifest_carries_the_provenance_it_was_given`、`test_tail_thresholds_are_carried_through_unchanged`、
+  `test_manifest_is_json_serialisable`——这三条只看 Task 5 已有的字段，所以**本来就该绿**；
+- `test_write_config_keeps_chinese_readable`——它直接调 `write_config`，不经过 `_config()`，
+  所以躲开了那个 `TypeError`。
+
+这是预期的，不是"测试写错了"；实现者**不必为让它们变红而改动任何东西**，
+也**不该**为了让 `test_write_config_*` 变绿去改 `write_config`——它要的那第三个
+形参正是本任务 Step 3 要给 `build_config` 加上的东西。
 
 - [ ] **Step 3: 补齐 `manifest.py`**
 
@@ -3430,7 +3460,12 @@ def test_default_paths_come_from_spec():
 cd "/c/work/学校/A.SPBU/Saint-peter-26/AI-2/project" && ./venv/Scripts/python.exe -m pytest tests/test_assemble_cli.py -p no:cacheprovider --basetemp="$TEMP/ap_t7" -q 2>&1 | tail -4
 ```
 
-预期：`ModuleNotFoundError: No module named 'experiment.data.assemble.cli'`。
+预期：`ImportError: cannot import name 'cli' from 'experiment.data.assemble'`。
+
+异常类型取决于导入写法：本任务的测试用的是 `from experiment.data.assemble import cli`，
+所以报 `ImportError`（包里没有这个名字）；`import experiment.data.assemble.cli` 才会报
+`ModuleNotFoundError`。两者说的是同一件事——模块还不存在——所以实现者看到 `ImportError`
+是**对的**，不要为了凑 `ModuleNotFoundError` 去改测试的导入行。
 
 - [ ] **Step 3: 写实现**
 
