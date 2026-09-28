@@ -281,7 +281,7 @@ datasets/raw/real/
 
 | # | 规则 | 处置 |
 | --- | --- | --- |
-| 1 | 按原始表行序分配稳定 `source_row_id`（从 1 起） | 保留 |
+| 1 | 按原始表行序分配稳定 `source_row_id`（从 0 起，即该行在 `pd.read_excel` 读入的源表中的 0 基位置） | 保留 |
 | 2 | `InvoiceNo` 以 `C`/`c` 开头 | 丢弃（取消单） |
 | 3 | `Quantity <= 0` 或 `UnitPrice <= 0` | 丢弃 |
 | 4 | `InvoiceNo`/`StockCode`/`Quantity`/`InvoiceDate`/`UnitPrice` 任一缺失 | 丢弃 |
