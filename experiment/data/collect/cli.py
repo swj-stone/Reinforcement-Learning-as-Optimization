@@ -10,6 +10,7 @@
 from __future__ import annotations
 
 import argparse
+import sys
 from pathlib import Path
 
 from experiment.data.collect.run import run_collection
@@ -17,6 +18,12 @@ from experiment.data.spec import REAL_DIR
 
 
 def main() -> int:
+    # 重定向到文件时 Windows 用 ANSI 代码页（如 cp1252/cp437）编码 stdout，
+    # 中文标签会抛 UnicodeEncodeError；此时产物已经写完，只会留下一个失败
+    # 的退出码和空日志。统一切到 UTF-8，与落盘约定一致。
+    if hasattr(sys.stdout, "reconfigure"):
+        sys.stdout.reconfigure(encoding="utf-8")
+
     parser = argparse.ArgumentParser(description="采集并清洗 UCI Online Retail")
     parser.add_argument(
         "--out",
