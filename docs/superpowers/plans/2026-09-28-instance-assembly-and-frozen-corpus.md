@@ -1316,6 +1316,7 @@ from experiment.data.spec import (
     E4_SKEW_K,
     FAMILIES,
     REAL_SEED_TOKEN,
+    SKEW_HEAVY_DENSITY_RANGE,
     SKEW_HEAVY_WEIGHT_RANGE,
     SPLITS,
     STRESS_SIZE_STREAM,
@@ -1506,7 +1507,12 @@ def test_build_e3_matches_the_frozen_quotas(index):
 
 
 def test_build_e3_without_an_index_emits_no_real_instances():
+    """没有批次索引就没有真实半边，但合成半边必须**照样足额**产出。
+
+    只断言 ``all(source == "synthetic")`` 会被空列表满足，因此先钉住条数。
+    """
     insts = S.build_e3(None, n=N, synthetic_per_family=1, real_per_alpha=3)
+    assert len(insts) == len(FAMILIES) * len(ALPHAS) * 1
     assert all(i["source"] == "synthetic" for i in insts)
 
 
@@ -1518,9 +1524,14 @@ def test_build_e4_matches_the_frozen_quota():
 
 
 def test_build_e3_and_e4_hashes_are_globally_unique():
+    """空结果会让两条唯一性断言同时空转，所以先钉住总数。
+
+    ``build_e3(None, ...)`` 只有合成半边：4 族 × 3 比率 × 2 条；E4 是 3 比率 × 2 条。
+    """
     seen: set[str] = set()
     insts = S.build_e3(None, seen=seen, n=N, synthetic_per_family=2, real_per_alpha=2)
     insts += S.build_e4(seen=seen, n=N, per_alpha=2)
+    assert len(insts) == len(FAMILIES) * len(ALPHAS) * 2 + len(ALPHAS) * 2
     hashes = [i["canonical_hash"] for i in insts]
     assert len(set(hashes)) == len(hashes)
     assert set(hashes) == seen
@@ -1850,9 +1861,18 @@ from experiment.data.assemble import merge as M
 from experiment.data.spec import FAMILIES
 
 CELL = (20, 0.25)
+
+#: cell 级的配额是**标量**。``assemble_split`` 的 ``synthetic_quota`` 是
+#: 「每个合成族每 cell 的条数」；夹具每个 cell 只提供 1 条，故取 1。
+#: ``real_quota`` 必须等于族数 × 每族条数，否则 50:50 闸门会报错。
+SYN_QUOTA = 1
+REAL_QUOTA = len(FAMILIES) * SYN_QUOTA
+
+#: run 级的配额是**按 split 索引的映射**，只给 ``run_assembly`` 用。
+#: 两个层级同名不同形，混用会让 ``read_cell(path)[:quota]`` 拿字典去切片。
 QUOTAS = {
-    "synthetic_quota": {"train": 1, "validation": 1, "test": 1},
-    "real_quota": {"train": 4, "validation": 4, "test": 4},
+    "synthetic_quota": {split: SYN_QUOTA for split in spec.SPLITS},
+    "real_quota": {split: REAL_QUOTA for split in spec.SPLITS},
 }
 
 
@@ -1891,7 +1911,7 @@ def test_synthetic_half_is_identical_to_the_generation_corpus(fixture_corpus, in
     代码而非已审计的语料。这条断言钉住后者。
     """
     source = M.read_cell(M.synthetic_cell_path(fixture_corpus, "train", "uniform", 20, 0.25))
-    merged, _ = M.assemble_split("train", index, fixture_corpus, cells=[CELL], **QUOTAS)
+    merged, _ = M.assemble_split("train", index, fixture_corpus, cells=[CELL], synthetic_quota=SYN_QUOTA, real_quota=REAL_QUOTA)
     picked = [i for i in merged if i["instance_id"] == source[0]["instance_id"]]
     assert len(picked) == 1
     assert picked[0] == source[0]
@@ -1901,7 +1921,7 @@ def test_synthetic_half_is_identical_to_the_generation_corpus(fixture_corpus, in
 
 
 def test_cell_order_is_families_then_real(index, fixture_corpus):
-    merged, _ = M.assemble_split("train", index, fixture_corpus, cells=[CELL], **QUOTAS)
+    merged, _ = M.assemble_split("train", index, fixture_corpus, cells=[CELL], synthetic_quota=SYN_QUOTA, real_quota=REAL_QUOTA)
     assert [i["source"] for i in merged] == ["synthetic"] * 4 + ["real"] * 4
     assert [i["family"] for i in merged[:4]] == list(FAMILIES)
     assert all(i["family"] is None for i in merged[4:])
@@ -1909,7 +1929,7 @@ def test_cell_order_is_families_then_real(index, fixture_corpus):
 
 def test_every_cell_is_fifty_fifty(index, fixture_corpus):
     _, cells = M.assemble_split(
-        "train", index, fixture_corpus, cells=[(20, 0.25), (20, 0.50)], **QUOTAS
+        "train", index, fixture_corpus, cells=[(20, 0.25), (20, 0.50)], synthetic_quota=SYN_QUOTA, real_quota=REAL_QUOTA
     )
     assert len(cells) == 2
     for cell in cells:
@@ -1926,11 +1946,18 @@ def test_raises_when_the_two_sides_do_not_match(index, fixture_corpus):
 
 
 def test_real_instances_use_the_family_count_as_the_quota(index, fixture_corpus):
-    """真实半边没有族维度，其条数必须等于合成半边（族数 × 每族条数）。"""
+    """真实半边没有族维度，其条数必须等于合成半边（族数 × 每族条数）。
+
+    每族条数只能取 ``SYN_QUOTA``：夹具每个 cell 只有 1 条合成实例
+    （``run_generation(quota_override=1)``），要求 3 条就会先被 50:50 闸门拦下。
+    两边都断言，才能同时钉住「合成半边真的按族数产出」与「真实半边对齐它」。
+    """
     merged, _ = M.assemble_split(
-        "train", index, fixture_corpus, cells=[CELL], synthetic_quota=3, real_quota=12
+        "train", index, fixture_corpus, cells=[CELL],
+        synthetic_quota=SYN_QUOTA, real_quota=len(FAMILIES) * SYN_QUOTA,
     )
-    assert sum(1 for i in merged if i["source"] == "real") == len(FAMILIES) * 3
+    assert sum(1 for i in merged if i["source"] == "synthetic") == len(FAMILIES) * SYN_QUOTA
+    assert sum(1 for i in merged if i["source"] == "real") == len(FAMILIES) * SYN_QUOTA
 
 
 # --- 全局去重 ---------------------------------------------------------------
@@ -1938,7 +1965,7 @@ def test_real_instances_use_the_family_count_as_the_quota(index, fixture_corpus)
 
 def test_all_hashes_in_the_merged_output_are_unique(index, fixture_corpus):
     merged, _ = M.assemble_split(
-        "train", index, fixture_corpus, cells=[(20, 0.25), (20, 0.50)], **QUOTAS
+        "train", index, fixture_corpus, cells=[(20, 0.25), (20, 0.50)], synthetic_quota=SYN_QUOTA, real_quota=REAL_QUOTA
     )
     hashes = [i["canonical_hash"] for i in merged]
     assert len(set(hashes)) == len(hashes)
@@ -1946,8 +1973,8 @@ def test_all_hashes_in_the_merged_output_are_unique(index, fixture_corpus):
 
 def test_seen_accumulates_across_cells_and_splits(index, fixture_corpus):
     seen: set[str] = set()
-    M.assemble_split("train", index, fixture_corpus, cells=[CELL], seen=seen, **QUOTAS)
-    M.assemble_split("validation", index, fixture_corpus, cells=[CELL], seen=seen, **QUOTAS)
+    M.assemble_split("train", index, fixture_corpus, cells=[CELL], seen=seen, synthetic_quota=SYN_QUOTA, real_quota=REAL_QUOTA)
+    M.assemble_split("validation", index, fixture_corpus, cells=[CELL], seen=seen, synthetic_quota=SYN_QUOTA, real_quota=REAL_QUOTA)
     assert len(seen) == 16
 
 
@@ -1956,7 +1983,7 @@ def test_synthetic_hash_colliding_with_seen_raises(index, fixture_corpus):
 
     传入上一次装配的全部哈希即可制造这种冲突——这条断言证明那道检查是活的。
     """
-    merged, _ = M.assemble_split("train", index, fixture_corpus, cells=[CELL], **QUOTAS)
+    merged, _ = M.assemble_split("train", index, fixture_corpus, cells=[CELL], synthetic_quota=SYN_QUOTA, real_quota=REAL_QUOTA)
     with pytest.raises(ValueError, match="合成"):
         M.assemble_split(
             "train",
@@ -1964,7 +1991,7 @@ def test_synthetic_hash_colliding_with_seen_raises(index, fixture_corpus):
             fixture_corpus,
             cells=[CELL],
             seen={i["canonical_hash"] for i in merged},
-            **QUOTAS,
+            synthetic_quota=SYN_QUOTA, real_quota=REAL_QUOTA,
         )
 
 
@@ -2050,7 +2077,7 @@ def test_upstream_provenance_reports_missing_files_as_none(tmp_path):
 
 
 def test_write_split_writes_lf_jsonl_and_returns_the_digest(index, fixture_corpus, tmp_path):
-    merged, _ = M.assemble_split("train", index, fixture_corpus, cells=[CELL], **QUOTAS)
+    merged, _ = M.assemble_split("train", index, fixture_corpus, cells=[CELL], synthetic_quota=SYN_QUOTA, real_quota=REAL_QUOTA)
     path = tmp_path / "train" / "instances.jsonl"
     digest = M.write_split(path, merged)
     raw = path.read_bytes()
@@ -2061,7 +2088,7 @@ def test_write_split_writes_lf_jsonl_and_returns_the_digest(index, fixture_corpu
 
 
 def test_write_split_is_byte_identical_on_rerun(index, fixture_corpus, tmp_path):
-    merged, _ = M.assemble_split("train", index, fixture_corpus, cells=[CELL], **QUOTAS)
+    merged, _ = M.assemble_split("train", index, fixture_corpus, cells=[CELL], synthetic_quota=SYN_QUOTA, real_quota=REAL_QUOTA)
     a, b = tmp_path / "a" / "instances.jsonl", tmp_path / "b" / "instances.jsonl"
     M.write_split(a, merged)
     M.write_split(b, merged)
