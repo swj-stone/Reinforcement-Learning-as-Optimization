@@ -82,6 +82,7 @@ tests/
 | `UCI_URL` | `https://archive.ics.uci.edu/static/public/352/online+retail.zip` |
 | `UCI_ZIP_ENTRY` | `Online Retail.xlsx` |
 | `UCI_XLSX_BYTES` | `23715344` |
+| `UCI_XLSX_SHA256` | `43465a06f2ccf7c8b5bd2892bc7defb52f97487934fe93b16ae4c3936424676d` |
 | `STOCK_CODE_RE` | `^\d{5}[A-Za-z]*$` |
 
 四个族 × 四个规模 × 三个容量比 = **48 个 cell**；每 split 的实例数 = 48 × 配额 → train 6000、validation 1200、test 1200，合计 **8400** 个合成实例。
