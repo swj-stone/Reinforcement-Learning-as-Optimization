@@ -87,6 +87,8 @@ Task 1–7 全部实现、双阶段审查通过之后，控制者发现三处需
 
 同批修掉两处文档勘误：设计文档 §8.6 的 `skewed` 参数写错了（原写 `heavy_weight U(500,2000)`、`heavy_density U(1,20)`；`spec.py` 实测是 `(200,500)` 与 `(30,60)`——`(500,2000)` 是 E4 的量程，`(1,20)` 是 `SKEW_BASE_WEIGHT_RANGE` 被串进了 heavy 槽位）；§10 末尾的 `quota_override` 表述已过时（入口暴露的是 `--synthetic-quota` / `--real-quota`）。
 
+**第四项：Task 8 Step 8 的一处预测值是错的，已按代码实测改正。** 原文预测 `dedup.total_instances` 为 `17400`，但 `merge.py:234` 与 `:252` 表明这个累加器在三个主 split 之外**把两个应力集也算进去**——真实规模应为 `12000+2400+2400+600+300 = 17700`。`17400` 恰好等于「主集 + E3」，把 E4 的 300 漏掉了。金样本独立印证了这个语义：其夹具是 `288+600+300=1188`，若不计 E4 则只有 888。**这个错误若不改，实现者会拿一个正确的产物去对一个错的预期**，然后报告一次假失败，甚至去"修" `merge.py`。Task 6 测试夹具里那个同值的 `17400`（L2748）**不动**——它是 stub，`build_manifest` 原样回显，且 Task 6 已实现提交，改了就是 drift；它多半也正是这处预测错误的来源。
+
 ### 0.9 冻结金样本（Task 8 之前必须已入库）
 
 `tests/golden/assemble_sections.json` + `tests/test_assemble_golden.py`（16 条）。
@@ -3963,7 +3965,7 @@ print('files       :', [(f['path'], f['lines']) for f in m['files']])
 "
 ```
 
-预期：`counts` 为 train 12000 / validation 2400 / test 2400；`stress` 为 e3_size 300+300、e4_tail 300+0；`dates` 为 213/46/46；`boundaries` 为 213/259；`eligible500` 为 209/46/46；`lots rows` 为 522504；`dedup.total_instances` 为 17400；`files` 五行且行数与 Step 4 一致。
+预期：`counts` 为 train 12000 / validation 2400 / test 2400；`stress` 为 e3_size 300+300、e4_tail 300+0；`dates` 为 213/46/46；`boundaries` 为 213/259；`eligible500` 为 209/46/46；`lots rows` 为 522504；`dedup.total_instances` 为 **17700**（= 12000+2400+2400 **+600+300**：`merge.py` 的 `total_instances` 在三个主 split 之外**把两个应力集也算进去**，见 `:252`；金样本同样印证——其夹具 `288+600+300=1188`，若不计 E4 则只有 888）；`files` 五行且行数与 Step 4 一致。
 
 - [ ] **Step 9: 提交两个协议产物**
 
