@@ -36,7 +36,7 @@
 
 `experiment/data/spec.py` 只允许**新增**本计划 Task 1 列出的常量，已有序段一行不动。
 
-以下文件**完全不许改**：`experiment/data/generate/*`（含 `families.py` 的 `_skewed`、`corpus.py`、`seeds.py`、`hashing.py`、`cli.py`）、`experiment/data/collect/*`、`tests/test_spec.py`、`tests/test_seeds.py`、`tests/test_families.py`、`tests/test_golden.py`、`tests/test_corpus.py`、`tests/test_generate_cli.py`。
+以下文件**完全不许改**：`experiment/data/generate/*`（含 `families.py` 的 `_skewed`、`corpus.py`、`seeds.py`、`hashing.py`、`cli.py`）、`experiment/data/collect/*`，以及 `tests/` 下**本计划新建之外的一切既有测试文件**（`test_spec.py`、`test_seeds.py`、`test_families.py`、`test_hashing.py`、`test_golden.py`、`test_corpus.py`、`test_lots.py`、`test_pence.py`、`test_cleaning.py`、`test_collect_io.py`、`test_collect_integration.py`）。清单以 `git ls-files tests/` 为准，不逐条记忆。
 
 理由：生成阶段的语料已被金样本钉死，改那些文件会作废已冻结的语料。
 
@@ -738,14 +738,20 @@ def pools_by_split(
     first_dates: dict[str, str],
     date_splits: dict[str, list[str]],
 ) -> dict[str, dict[str, list[Lot]]]:
-    """``split -> 日期 -> 该日全部批次``，池内保持文件行序。
+    """``split -> 发票归属日 -> 该日全部批次``，池内保持文件行序。
+
+    **桶键是发票的最早日期，不是批次自己的 ``invoice_date``**（第 4 节 /
+    设计文档 6.1：全部 lot 随发票走）。跨午夜的发票两笔都要落进「最早那天」
+    的池子；若按批次自己的日期分桶，池键就会与 ``date_splits`` 的日期集合
+    脱节，``eligible`` 会报出这个 split 并不拥有的日期。
 
     行序是冻结语义：抽样用 rng 在池内取下标，池的顺序一变，抽出的批次就变。
     """
     split_of_date = {day: split for split, days in date_splits.items() for day in days}
     pools: dict[str, dict[str, list[Lot]]] = {split: defaultdict(list) for split in SPLITS}
     for lot in lots:
-        pools[split_of_date[first_dates[lot.invoice_no]]][lot.invoice_date[:10]].append(lot)
+        day = first_dates[lot.invoice_no]
+        pools[split_of_date[day]][day].append(lot)
     return {split: dict(by_day) for split, by_day in pools.items()}
 
 
@@ -779,8 +785,8 @@ def tail_thresholds(
     """E4b 的极值阈值：给定批次的 ``quantity_w`` 与 ``unit_price`` 的分位数。
 
     第 8 节硬要求阈值**只用训练记录**定。本函数只认传入的批次，调用方负责
-    只传训练集那部分——这一点由 ``test_tail_thresholds_use_only_the_rows_they_are_given``
-    钉住。
+    只传训练集那部分——这一点由
+    ``test_tail_thresholds_ignore_rows_they_were_not_given`` 钉住。
 
     价格用 ``Decimal`` 排序而非 float：阈值会被冻进 manifest，浮点会让
     「同一份数据两次算出不同阈值」成为可能。返回值一律是字符串，JSON 无损。
