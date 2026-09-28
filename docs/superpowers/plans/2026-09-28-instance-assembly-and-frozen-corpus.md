@@ -75,6 +75,37 @@ from experiment.data.generate.corpus import write_cell               # (path, in
 
 `experiment_config.yaml` 里，设计文档 §8.6 的草图把 `python` 放在 `packages` 内。本计划改成独立的 `runtime.python`，好让 `packages` 与 `requirements.txt` 保持逐项对应（否则"packages 是否忠于 requirements.txt"这条断言就没法写）。另把 §6 的训练预算段命名为 `budgets`（与设计文档 §8.6 一致），`methods` 取 `[random, greedy, dqn]`（设计文档 §8.6 的写法）。
 
+### 0.8 执行后的修订（2026-09-28，Task 7 通过之后、Task 8 之前）
+
+Task 1–7 全部实现、双阶段审查通过之后，控制者发现三处需要修订，逐项获准后落地。**本次只改了 Task 6 的围栏**（Task 1–5、7 的围栏一字未动），改完后 `manifest.py` 与围栏重新逐字节对齐，由 `check_fences.py` 复核：18 个围栏、6 个整文件命中。
+
+1. **路径相对化。** `manifest.py` 新增 `_display_path()`：仓库内记 `relative_to(REPO_ROOT).as_posix()`，仓库外记 `.as_posix()`。`_file_fact` 的三处调用（`lots_clean` / `collect_report` / `generation_manifest`）与 `output_dir` 都改走它。**`output_dir` 原先在"仓库外"那一支用的是 `str()`，会给 JSON 产物写进反斜杠**；现在两条分支共用一条规则。绝对路径会把 `C:/work/学校/…` 这种本机信息写进**纳入版本库**的凭据里：换一台机器复核时，它既指向一个不存在的目录树，也无法与复核者 `git status` 里的字符串比对。
+
+2. **§6 的正文补进 config。** 新增 `_RL_ENVIRONMENT` 常量与顶层 `rl_environment` 段，转录 §6 **表格之外**的正文：`gamma=1`、奖励整形 `v_i / Σv_j`、回合/状态/动作/终止语义、动作掩码、网络结构（2 层 64 单元 ReLU 编码器、128 单元头、两个 Q 值输出、池化规则、`log(1+n)`、"IDs and source labels are not prediction features"）、平衡块采样、检查点选择（按 `V/U`，从不用测试集）、以及 300k→1M 的上调条款。§10 要求 config 记录"RL 设置"，而原先只抄了表格——**表格里既没有 `gamma` 也没有网络结构**，这两项恰恰决定能不能复现训练。`budgets` 仍是那张表，两段不合并。
+
+3. **新增冻结金样本。** 见 §0.9。
+
+同批修掉两处文档勘误：设计文档 §8.6 的 `skewed` 参数写错了（原写 `heavy_weight U(500,2000)`、`heavy_density U(1,20)`；`spec.py` 实测是 `(200,500)` 与 `(30,60)`——`(500,2000)` 是 E4 的量程，`(1,20)` 是 `SKEW_BASE_WEIGHT_RANGE` 被串进了 heavy 槽位）；§10 末尾的 `quota_override` 表述已过时（入口暴露的是 `--synthetic-quota` / `--real-quota`）。
+
+### 0.9 冻结金样本（Task 8 之前必须已入库）
+
+`tests/golden/assemble_sections.json` + `tests/test_assemble_golden.py`（16 条）。
+
+**补的是什么盲区。** Task 1–7 的测试在身份、计数、50:50、种子、流隔离上都强，但**派生内容**（切分边界、每 split 的合格日期与实测占比、每个语料文件的 sha256/行数/字节数）与**入库产物的字节**（缩进、键序、行尾、BOM）一条断言都没有：改一个取整方向、少算一个 split、把缩进从 2 改成 4，整套测试依然全绿。
+
+**夹具是 10 天 × 600 批次，不是 `conftest.lots_csv` 的 10 × 24。** E3 的真实半边要从**单个**测试日期里抽出 500 个批次，而 24 批次/天在 n=50 就报错停下（`train 中没有任何日期能提供 n=50 个批次`）。夹具因此自建，并跑**生产形态**（`include_stress=True`）。
+
+**钉住 manifest 的十段**：`cells` / `counts` / `dedup` / `files` / `schema_version` / `split_policy` / `splits` / `streams` / `stress` / `tail_thresholds`。**只有三段不钉**：`generated_at`（时钟）、`output_dir` 与 `provenance.*.path`（本次运行的临时目录）。有一条断言把这个差集写死，防止"没钉住"的范围悄悄变大。
+
+**没有"缺失即生成"的回退。** `tests/test_golden.py` 有（首次运行 `pytest.skip`），那在本项目是陷阱：验收要求「全绿且无 skipped」（设计 §11.8），而缺失即跳过会让金样本在文件丢失时静默通过。这里文件缺失是硬错误。
+
+**两处值得知情的事实。**
+
+- `provenance.generation_manifest.sha256` 复现不了：它哈希的 `generation_dir/manifest.json` 内含**自己的** `generated_at`，每次重跑都不同。设计 §10 已声明 manifest 本身不是字节稳定的（只有五个语料文件是），故不是缺陷；但该字段不能充当跨机器复现的凭据。
+- 金样本的 `files` 段钉住的是**夹具规模**（10 天 × 600 批次）下的行数与摘要，不是真实语料的。这是刻意的：它测的是装配逻辑与字节格式，真实规模由 Task 8 的验收步骤单独量。
+
+**因此 Task 8 的测试总数由 291 变为 307**（Step 2 与 Step 9 的预期已同步更新）。
+
 ---
 
 ## 1. 文件结构
@@ -96,6 +127,8 @@ from experiment.data.generate.corpus import write_cell               # (path, in
 | `tests/test_assemble_merge.py` | 上游 provenance、顺序、50:50、全局去重、字节稳定、端到端 |
 | `tests/test_assemble_manifest.py` | manifest/config 的字段、真实性与格式 |
 | `tests/test_assemble_cli.py` | 入口的退出码与产物 |
+| `tests/golden/assemble_sections.json` | 冻结金样本：manifest 十段的实测值（§0.9） |
+| `tests/test_assemble_golden.py` | 金样本比对 + 两个协议产物的字节格式（§0.9，16 条） |
 
 ---
 
@@ -3053,16 +3086,102 @@ _EVALUATION: dict[str, object] = {
     "trivial_case": "empty solution when no item fits; excluded from percentage denominators",
 }
 
+#: EXPERIMENT_PLAN.md §6 的**正文**（相对表格而言）里定下的环境与训练规则。
+#: 表格进 :data:`_BUDGETS`，正文进这里：两者都是转录，少记一半，后续阶段就得
+#: 回头读 Markdown，而那份 Markdown 不是被冻结、被校验的产物。
+_RL_ENVIRONMENT: dict[str, object] = {
+    "action_masking": (
+        "skip is always valid; infeasible include actions are masked in exploration, "
+        "inference, and the maximum used in the learning target"
+    ),
+    "actions": (
+        "include subtracts the resource requirement and earns the item's value; "
+        "skip earns zero"
+    ),
+    "budget_escalation": {
+        "applies_to": "all three seeds",
+        "condition": "if 300000 transitions is insufficient and time allows",
+        "means": "a validation-only decision, recorded",
+        "to_transitions": 1000000,
+    },
+    "budget_freeze": "fix the final budget before viewing test metrics",
+    "checkpoint_selection": {
+        "basis": (
+            "mean validation score V/U, where U is a fixed valid reference upper "
+            "bound for that instance"
+        ),
+        "certified_optimum": (
+            "U = V*; trivial zero-optimum cases are excluded from the ratio and "
+            "counted separately"
+        ),
+        "never_select_on": "test performance",
+        "source_weighting": (
+            "weight sources equally; report cell-macro scores if quotas changed"
+        ),
+        "tie_break": "the earlier checkpoint",
+    },
+    "episode": "each item is considered exactly once",
+    "gamma": 1,
+    "network": {
+        "encoder": (
+            "shared two-layer, 64-unit ReLU over each remaining item's normalized "
+            "(w_i/C, v_i/sum(v))"
+        ),
+        "excluded_from_inputs": "IDs and source labels are not prediction features",
+        "head": "128-unit ReLU layer with two Q-value outputs",
+        "inputs_after_pooling": [
+            "mean and max pooled embeddings",
+            "the current item's normalized pair",
+            "remaining_capacity/C",
+            "remaining_count/n",
+            "log(1+n)",
+        ],
+        "pooling": (
+            "only unprocessed items, including the current item; processed items "
+            "and padding excluded"
+        ),
+        "terminal": "terminal states bypass next-state evaluation",
+    },
+    "reward_shaping": (
+        "for learning only, reward = v_i / sum_j(v_j) when including an item; final "
+        "selections are evaluated in the original units"
+    ),
+    "sampling": (
+        "sample repeatedly from the fixed training corpus; a balanced block takes one "
+        "instance per available (source, size) pair in random order, with capacity "
+        "ratios and synthetic families cycled evenly across blocks; cells marked "
+        "unavailable in the manifest are excluded"
+    ),
+    "state": "all item requirements/values, the current index, and the remaining capacity",
+    "termination": "after the last item the episode terminates and the bootstrap term is zero",
+}
+
+
+def _display_path(path: Path) -> str:
+    """路径在产物里的写法：仓库内记相对形式，仓库外保持绝对。
+
+    绝对路径会把 ``C:/work/学校/...`` 这类本机信息写进**纳入版本库**的凭据里：
+    换一台机器复核时，它既指向一个不存在的目录树，也无法与复核者自己的工作区
+    比对。相对路径则恰好是复核者 `git status` 里看到的那个字符串。
+
+    用 POSIX 分隔符而不是本机分隔符：两个产物都是 JSON/YAML，读者可能在任何
+    平台上，反斜杠在 JSON 里还要转义，肉眼比对时是个陷阱。
+    """
+    path = Path(path)
+    if path.is_relative_to(REPO_ROOT):
+        return path.relative_to(REPO_ROOT).as_posix()
+    return path.as_posix()
+
 
 def _file_fact(path: Path) -> dict:
     """一个文件的路径与摘要；文件不存在时摘要为 ``None``（不假装有）。"""
     path = Path(path)
     if not path.is_file():
-        return {"bytes": None, "path": path.as_posix(), "sha256": None}
+        return {"bytes": None, "path": _display_path(path), "sha256": None}
     raw = path.read_bytes()
     return {
         "bytes": len(raw),
-        "path": path.as_posix(),
+        "path": _display_path(path),
         "sha256": hashlib.sha256(raw).hexdigest(),
     }
 
@@ -3182,11 +3301,7 @@ def build_manifest(
         "dedup": dict(dedup),
         "files": list(files),
         "generated_at": generated_at,
-        "output_dir": (
-            Path(out_dir).relative_to(REPO_ROOT).as_posix()
-            if Path(out_dir).is_relative_to(REPO_ROOT)
-            else str(out_dir)
-        ),
+        "output_dir": _display_path(out_dir),
         "provenance": dict(provenance),
         "schema_version": schema_version,
         "split_policy": {
@@ -3302,6 +3417,7 @@ def build_config(
         "packages": parse_packages(requirements),
         "quotas": {"real": dict(REAL_QUOTA), "synthetic": dict(SYNTHETIC_QUOTA)},
         "real": {"split_fractions": list(SPLIT_DATE_FRACTIONS)},
+        "rl_environment": dict(_RL_ENVIRONMENT),
         "runtime": {"python": platform.python_version()},
         "schema_version": SCHEMA_VERSION,
         "sizes": list(SIZES),
@@ -3643,7 +3759,7 @@ cd "/c/work/学校/A.SPBU/Saint-peter-26/AI-2/project" && ls -A datasets/process
 cd "/c/work/学校/A.SPBU/Saint-peter-26/AI-2/project" && ./venv/Scripts/python.exe -m pytest -p no:cacheprovider --basetemp="$TEMP/ap_t8" -q 2>&1 | tail -3
 ```
 
-预期：`291 passed`，0 failed、**不得出现 skipped / xfailed / error**。若此处不是全绿，停下来报告，不要继续。
+预期：`307 passed`（291 + §0.9 的 16 条金样本），0 failed、**不得出现 skipped / xfailed / error**。若此处不是全绿，停下来报告，不要继续。
 
 - [ ] **Step 3: 跑真实装配**
 
@@ -3861,7 +3977,7 @@ cd "/c/work/学校/A.SPBU/Saint-peter-26/AI-2/project" && git add data_manifest.
 cd "$TEMP" && rm -rf ap_freshvenv && "/c/work/学校/A.SPBU/Saint-peter-26/AI-2/project/venv/Scripts/python.exe" -m venv ap_freshvenv && ap_freshvenv/Scripts/python.exe -m pip install -q -r "/c/work/学校/A.SPBU/Saint-peter-26/AI-2/project/requirements.txt" && cd "/c/work/学校/A.SPBU/Saint-peter-26/AI-2/project" && "$TEMP/ap_freshvenv/Scripts/python.exe" -m pytest -p no:cacheprovider --basetemp="$TEMP/ap_t8fresh" -q 2>&1 | tail -3
 ```
 
-预期：`291 passed`，0 failed、0 skipped。
+预期：`307 passed`（291 + §0.9 的 16 条金样本），0 failed、0 skipped。
 
 - [ ] **Step 11: 报告**
 

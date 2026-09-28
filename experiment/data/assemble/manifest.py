@@ -101,16 +101,102 @@ _EVALUATION: dict[str, object] = {
     "trivial_case": "empty solution when no item fits; excluded from percentage denominators",
 }
 
+#: EXPERIMENT_PLAN.md §6 的**正文**（相对表格而言）里定下的环境与训练规则。
+#: 表格进 :data:`_BUDGETS`，正文进这里：两者都是转录，少记一半，后续阶段就得
+#: 回头读 Markdown，而那份 Markdown 不是被冻结、被校验的产物。
+_RL_ENVIRONMENT: dict[str, object] = {
+    "action_masking": (
+        "skip is always valid; infeasible include actions are masked in exploration, "
+        "inference, and the maximum used in the learning target"
+    ),
+    "actions": (
+        "include subtracts the resource requirement and earns the item's value; "
+        "skip earns zero"
+    ),
+    "budget_escalation": {
+        "applies_to": "all three seeds",
+        "condition": "if 300000 transitions is insufficient and time allows",
+        "means": "a validation-only decision, recorded",
+        "to_transitions": 1000000,
+    },
+    "budget_freeze": "fix the final budget before viewing test metrics",
+    "checkpoint_selection": {
+        "basis": (
+            "mean validation score V/U, where U is a fixed valid reference upper "
+            "bound for that instance"
+        ),
+        "certified_optimum": (
+            "U = V*; trivial zero-optimum cases are excluded from the ratio and "
+            "counted separately"
+        ),
+        "never_select_on": "test performance",
+        "source_weighting": (
+            "weight sources equally; report cell-macro scores if quotas changed"
+        ),
+        "tie_break": "the earlier checkpoint",
+    },
+    "episode": "each item is considered exactly once",
+    "gamma": 1,
+    "network": {
+        "encoder": (
+            "shared two-layer, 64-unit ReLU over each remaining item's normalized "
+            "(w_i/C, v_i/sum(v))"
+        ),
+        "excluded_from_inputs": "IDs and source labels are not prediction features",
+        "head": "128-unit ReLU layer with two Q-value outputs",
+        "inputs_after_pooling": [
+            "mean and max pooled embeddings",
+            "the current item's normalized pair",
+            "remaining_capacity/C",
+            "remaining_count/n",
+            "log(1+n)",
+        ],
+        "pooling": (
+            "only unprocessed items, including the current item; processed items "
+            "and padding excluded"
+        ),
+        "terminal": "terminal states bypass next-state evaluation",
+    },
+    "reward_shaping": (
+        "for learning only, reward = v_i / sum_j(v_j) when including an item; final "
+        "selections are evaluated in the original units"
+    ),
+    "sampling": (
+        "sample repeatedly from the fixed training corpus; a balanced block takes one "
+        "instance per available (source, size) pair in random order, with capacity "
+        "ratios and synthetic families cycled evenly across blocks; cells marked "
+        "unavailable in the manifest are excluded"
+    ),
+    "state": "all item requirements/values, the current index, and the remaining capacity",
+    "termination": "after the last item the episode terminates and the bootstrap term is zero",
+}
+
+
+def _display_path(path: Path) -> str:
+    """路径在产物里的写法：仓库内记相对形式，仓库外保持绝对。
+
+    绝对路径会把 ``C:/work/学校/...`` 这类本机信息写进**纳入版本库**的凭据里：
+    换一台机器复核时，它既指向一个不存在的目录树，也无法与复核者自己的工作区
+    比对。相对路径则恰好是复核者 `git status` 里看到的那个字符串。
+
+    用 POSIX 分隔符而不是本机分隔符：两个产物都是 JSON/YAML，读者可能在任何
+    平台上，反斜杠在 JSON 里还要转义，肉眼比对时是个陷阱。
+    """
+    path = Path(path)
+    if path.is_relative_to(REPO_ROOT):
+        return path.relative_to(REPO_ROOT).as_posix()
+    return path.as_posix()
+
 
 def _file_fact(path: Path) -> dict:
     """一个文件的路径与摘要；文件不存在时摘要为 ``None``（不假装有）。"""
     path = Path(path)
     if not path.is_file():
-        return {"bytes": None, "path": path.as_posix(), "sha256": None}
+        return {"bytes": None, "path": _display_path(path), "sha256": None}
     raw = path.read_bytes()
     return {
         "bytes": len(raw),
-        "path": path.as_posix(),
+        "path": _display_path(path),
         "sha256": hashlib.sha256(raw).hexdigest(),
     }
 
@@ -230,11 +316,7 @@ def build_manifest(
         "dedup": dict(dedup),
         "files": list(files),
         "generated_at": generated_at,
-        "output_dir": (
-            Path(out_dir).relative_to(REPO_ROOT).as_posix()
-            if Path(out_dir).is_relative_to(REPO_ROOT)
-            else str(out_dir)
-        ),
+        "output_dir": _display_path(out_dir),
         "provenance": dict(provenance),
         "schema_version": schema_version,
         "split_policy": {
@@ -350,6 +432,7 @@ def build_config(
         "packages": parse_packages(requirements),
         "quotas": {"real": dict(REAL_QUOTA), "synthetic": dict(SYNTHETIC_QUOTA)},
         "real": {"split_fractions": list(SPLIT_DATE_FRACTIONS)},
+        "rl_environment": dict(_RL_ENVIRONMENT),
         "runtime": {"python": platform.python_version()},
         "schema_version": SCHEMA_VERSION,
         "sizes": list(SIZES),
