@@ -8,13 +8,13 @@ import json
 
 import pytest
 
+from experiment.data.collect.download import sha256_file
 from experiment.data.collect.run import read_workbook, run_collection
 from experiment.data.spec import (
     CLEANING_RULES,
     LOTS_COLUMNS,
     REAL_DIR,
     SOURCE_COLUMNS,
-    UCI_XLSX_BYTES,
     UCI_XLSX_NAME,
 )
 
@@ -57,10 +57,15 @@ def test_report_rule_keys_are_complete(tmp_path):
 
 
 def test_report_records_source_provenance(tmp_path):
+    """报告里的来源信息必须是对磁盘上这份文件**实测**的结果。
+
+    只断言「长度 64」是恒真的：任何 64 字符串都能通过，常量回填也能通过。
+    这里改为与本地文件实测值比对，报告一旦记录虚构的字节数或摘要就会失败。
+    """
     report = run_collection(out_dir=tmp_path, workbook=WORKBOOK)
     assert report["source"]["url"].startswith("https://archive.ics.uci.edu/")
-    assert report["source"]["xlsx_bytes"] == UCI_XLSX_BYTES
-    assert len(report["source"]["xlsx_sha256"]) == 64
+    assert report["source"]["xlsx_bytes"] == WORKBOOK.stat().st_size
+    assert report["source"]["xlsx_sha256"] == sha256_file(WORKBOOK)
     assert len(report["source"]["lots_sha256"]) == 64
 
 

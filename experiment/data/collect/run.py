@@ -18,7 +18,6 @@ from experiment.data.spec import (
     SOURCE_COLUMNS,
     UCI_SHEET_NAME,
     UCI_URL,
-    UCI_XLSX_BYTES,
     UCI_XLSX_NAME,
     UCI_ZIP_NAME,
 )
@@ -60,7 +59,7 @@ def build_report(
         "schema_version": SCHEMA_VERSION,
         "source": {
             "url": UCI_URL,
-            "xlsx_bytes": UCI_XLSX_BYTES,
+            "xlsx_bytes": xlsx_path.stat().st_size,
             "xlsx_sha256": sha256_file(xlsx_path),
             "zip_sha256": sha256_file(zip_path) if zip_path.is_file() else None,
             "lots_sha256": sha256_file(lots_path),

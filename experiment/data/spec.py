@@ -48,6 +48,10 @@ UCI_ZIP_ENTRY: str = "Online Retail.xlsx"
 UCI_SHEET_NAME: str = "Online Retail"
 #: 冻结的工作簿字节数。UCI 若替换了文件，此校验会立刻失败，而不是静默换数据。
 UCI_XLSX_BYTES: int = 23715344
+#: 冻结的工作簿 SHA-256。字节数只是粗筛：上游完全可以换一个同样 23715344 字节的
+#: 文件，而清洗结果、批次表乃至全部下游指标都取决于这份输入的精确字节。摘要校验
+#: 才真正把「换了文件」这件事变得可观测。
+UCI_XLSX_SHA256: str = "43465a06f2ccf7c8b5bd2892bc7defb52f97487934fe93b16ae4c3936424676d"
 #: 仓库中原始工作簿的落盘名
 UCI_XLSX_NAME: str = "online_retail.xlsx"
 UCI_ZIP_NAME: str = "online_retail.zip"

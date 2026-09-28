@@ -16,6 +16,7 @@ from experiment.data.spec import (
     UCI_URL,
     UCI_XLSX_BYTES,
     UCI_XLSX_NAME,
+    UCI_XLSX_SHA256,
     UCI_ZIP_ENTRY,
     UCI_ZIP_NAME,
     USER_AGENT,
@@ -72,6 +73,21 @@ def verify_workbook_size(path: Path, expected_bytes: int = UCI_XLSX_BYTES) -> in
     return actual
 
 
+def verify_workbook_digest(path: Path, expected: str = UCI_XLSX_SHA256) -> str:
+    """校验工作簿 SHA-256，不符即抛错，返回实测摘要。
+
+    字节数校验拦不住「同尺寸替换」：上游换一个恰好同样长的文件，尺寸校验会
+    静默放行，而下游的一切都建立在错误的数据之上。摘要把这件事变成硬失败。
+    """
+    actual = sha256_file(Path(path))
+    if actual != expected:
+        raise ValueError(
+            f"工作簿摘要不符：期望 {expected}，实际 {actual}（{path}）。"
+            "上游文件可能已变更，请先核对再继续。"
+        )
+    return actual
+
+
 def ensure_workbook(
     dest_dir: Path,
     force: bool = False,
@@ -79,7 +95,7 @@ def ensure_workbook(
 ) -> tuple[Path, Path]:
     """确保 ``dest_dir`` 下有可用的 zip 与 xlsx，返回 ``(zip_path, xlsx_path)``。
 
-    已存在且字节数正确的 xlsx 会被直接复用，避免每次重跑都下载 23 MB。
+    已存在且字节数与摘要均正确的 xlsx 会被直接复用，避免每次重跑都下载 23 MB。
     """
     dest_dir = Path(dest_dir)
     zip_path = dest_dir / UCI_ZIP_NAME
@@ -87,9 +103,11 @@ def ensure_workbook(
 
     if not force and xlsx_path.is_file():
         verify_workbook_size(xlsx_path)
+        verify_workbook_digest(xlsx_path)
         return zip_path, xlsx_path
 
     fetch_zip(url=url, dest=zip_path)
     extract_entry(zip_path, UCI_ZIP_ENTRY, xlsx_path)
     verify_workbook_size(xlsx_path)
+    verify_workbook_digest(xlsx_path)
     return zip_path, xlsx_path

@@ -11,6 +11,7 @@ import pytest
 from experiment.data.collect.download import (
     extract_entry,
     sha256_file,
+    verify_workbook_digest,
     verify_workbook_size,
 )
 
@@ -53,3 +54,22 @@ def test_verify_workbook_size_rejects_a_changed_file(tmp_path):
     path.write_bytes(b"12345")
     with pytest.raises(ValueError, match="字节数"):
         verify_workbook_size(path, expected_bytes=6)
+
+
+def test_verify_workbook_digest_accepts_a_matching_file(tmp_path):
+    path = tmp_path / "w.xlsx"
+    path.write_bytes(b"12345")
+    expected = sha256_file(path)
+    assert verify_workbook_digest(path, expected=expected) == expected
+
+
+def test_verify_workbook_digest_rejects_a_same_size_swap(tmp_path):
+    """字节数校验拦不住同尺寸替换：内容变了，尺寸照旧。摘要必须单独拦下它。"""
+    path = tmp_path / "w.xlsx"
+    path.write_bytes(b"12345")
+    before = verify_workbook_digest(path, expected=sha256_file(path))
+
+    path.write_bytes(b"12346")  # 同样 5 字节，内容不同
+    assert verify_workbook_size(path, expected_bytes=5) == 5  # 尺寸校验静默放行
+    with pytest.raises(ValueError, match="摘要"):
+        verify_workbook_digest(path, expected=before)
