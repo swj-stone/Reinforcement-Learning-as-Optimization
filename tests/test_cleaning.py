@@ -4,10 +4,12 @@
 精确值而不是范围。这样一旦规则顺序被改动，测试会立刻指出是哪一条。
 """
 
+from decimal import Decimal
+
 import pandas as pd
 import pytest
 
-from experiment.data.collect.clean import apply_cleaning
+from experiment.data.collect.clean import apply_cleaning, to_pence
 from experiment.data.spec import CLEANING_RULES, SOURCE_COLUMNS
 
 KEPT_ID = 0
@@ -152,6 +154,26 @@ def test_kept_rows_carry_computed_pence(kept):
     assert by_id.loc[KEPT_ID, "value_pence"] == 1530      # 2.55 * 6
     assert by_id.loc[KEPT_ID_2, "value_pence"] == 2034    # 3.39 * 6
     assert by_id.loc[KEPT_ID_MISSING_CUSTOMER, "value_pence"] == 250   # 1.25 * 2
+
+
+def test_extreme_value_is_preserved_not_winsorised():
+    """设计文档第 9 节：正异常值一律保留，不按任何分位数裁剪。
+
+    取真实语料里的最大单笔（数量 80995 × 单价 2.08）：极值行必须原样幸存，
+    价值恰为 16846960 分——既不封顶、也不截尾、更不被当作离群点丢弃。
+    """
+    rows = [
+        (536365, "85123A", "MEDIUM CERAMIC TOP STORAGE JAR", 80995,
+         "2010-12-01 08:26:00", 2.08, 17850.0, "United Kingdom"),
+    ]
+    frame, report = apply_cleaning(pd.DataFrame(rows, columns=list(SOURCE_COLUMNS)))
+    assert report["kept_rows"] == 1
+    assert report["dropped_by_reason"]["zero_value_pence"] == 0
+    assert frame["source_row_id"].tolist() == [0]
+    assert frame["quantity_w"].tolist() == [80995]
+    # 16846960 是手算的独立锚点；to_pence 一侧记录它正是规格给出的换算。
+    assert frame["value_pence"].tolist() == [16846960]
+    assert frame["value_pence"].tolist() == [to_pence(Decimal("2.08"), 80995)]
 
 
 def test_quantity_w_is_integer_typed(kept):
