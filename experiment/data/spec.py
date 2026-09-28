@@ -153,3 +153,68 @@ def all_cells() -> list[tuple[str, int, float]]:
     ``generate`` 模块的去重循环负责，不在返回值里。
     """
     return [(f, n, a) for f in FAMILIES for n in SIZES for a in ALPHAS]
+
+
+# --- 实例装配（第三阶段，依据 EXPERIMENT_PLAN.md 第 4 节与第 8 节）---------
+
+#: 真实实例每个 (n, alpha) cell 的配额（第 4 节）
+REAL_QUOTA: dict[str, int] = {"train": 500, "validation": 100, "test": 100}
+
+#: 日期切分的两个边界占比（第 4 节），均下取整
+SPLIT_DATE_FRACTIONS: tuple[float, float] = (0.70, 0.85)
+
+#: 真实实例在种子键中占用的 family 槽位记号。刻意不在 FAMILIES 中：
+#: 真实实例的种子因此不可能与任何合成族相同。
+REAL_SEED_TOKEN: str = "real"
+
+#: 应力集的流记号，只活在种子键内部，不落盘。落盘用的是 E3_NAME / E4_NAME。
+#: 第 8 节要求「保留 4001/5001 两条流」；真正承担隔离的是这两个字符串记号，
+#: 而不是 STRESS_MASTER_SEEDS 里的数字（见设计文档第 12.1 节）。
+STRESS_SIZE_STREAM: str = "stream_size"
+STRESS_TAIL_STREAM: str = "stream_tail"
+
+#: E4 变体生成器在种子键中占用的 family 槽位记号
+E4_SEED_TOKEN: str = "skewed_e4"
+
+#: 第 8 节声明的应力流主种子。与 MASTER_SEEDS 同样是**声明标识**，不参与
+#: derive_seed 的键；记录在此是为了让声明与机制的关系可被复核。
+STRESS_MASTER_SEEDS: dict[str, int] = {"size": 4001, "tail": 5001}
+
+#: 应力集的数据集名，同时是目录名与 instance_id 的组成部分
+E3_NAME: str = "e3_size"
+E4_NAME: str = "e4_tail"
+
+#: E3（未见过的规模）配额，第 8 节
+E3_SIZE: int = 500
+E3_SYNTHETIC_PER_FAMILY: int = 25
+E3_REAL_PER_ALPHA: int = 100
+
+#: E4（更强的不平衡）配额与变体参数，第 8 节
+E4_SIZE: int = 200
+E4_COUNT_PER_ALPHA: int = 100
+E4_SKEW_K: int = 2
+E4_SKEW_HEAVY_WEIGHT_RANGE: tuple[int, int] = (500, 2000)
+E4_SKEW_HEAVY_DENSITY_RANGE: tuple[int, int] = (100, 200)
+
+#: E4b 阈值分位数（第 8 节）。阈值只用训练记录定；本阶段只算并冻结，
+#: 实际标记属于评估阶段。
+TAIL_QUANTILE: float = 0.99
+
+# --- 装配阶段的输出路径 -----------------------------------------------------
+
+DATASETS_PROCESSED: Path = REPO_ROOT / "datasets" / "processed"
+
+#: 协议产物放在仓库根目录并纳入版本库。datasets/ 整体被 gitignore，把审计
+#: 凭据放在那里等于换一台机器就无从证明数据未被调换。
+DATA_MANIFEST_PATH: Path = REPO_ROOT / "data_manifest.json"
+EXPERIMENT_CONFIG_PATH: Path = REPO_ROOT / "experiment_config.yaml"
+
+
+def capacity_cells() -> list[tuple[int, float]]:
+    """按冻结顺序枚举 12 个 ``(n, alpha)`` cell：n 在外层、alpha 在内层。
+
+    这是合并文件里实例的排列顺序，也是 50:50 断言的遍历顺序。刻意与
+    :func:`all_cells` 的 family-外层嵌套序不同：那个服务生成的去重顺序，
+    本函数服务面向读者的产物顺序。
+    """
+    return [(n, a) for n in SIZES for a in ALPHAS]
