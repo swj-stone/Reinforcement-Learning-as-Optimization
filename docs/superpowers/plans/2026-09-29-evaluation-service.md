@@ -1377,7 +1377,8 @@ def test_item_set_hash_depends_on_the_set_not_the_list_order():
 
 
 def test_adversarial_shapes_keep_the_bound_and_the_reconstruction_valid():
-    """边界形状：容量 0、一件都整件装不下、同比值并列、零重量的物品。
+    """边界形状：容量 0、一件都整件装不下、同比值并列、零重量的物品、
+    重量恰好等于容量的物品、最优值可由多个容量列达到。
 
     这些形状真实语料里一个都没有（实测平凡解 0/17700），所以必须合成。
     """
@@ -1400,6 +1401,21 @@ def test_adversarial_shapes_keep_the_bound_and_the_reconstruction_valid():
             sum(instance["weights"][i] for i in chosen) <= instance["capacity"]
         ), instance
         assert sum(instance["values"][i] for i in chosen) == result.value, instance
+
+    # 下面两条**必须钉住具体期望值**，不能走上面的自洽循环：自洽断言对
+    # 「一件都没装进去」同样成立，因此对这两个缺陷一律沉默。两条都已在两版
+    # 变异体上探针验证过（`wi <= capacity` → `wi < capacity`；重建起点取最大
+    # 列而非最小列）。
+
+    # 重量**恰好**等于容量的物品必须能被选上。变异体把它整件丢掉，V* 由 10
+    # 变成 0，而自洽断言照样全绿（空集重量 0 <= 5、价值 0 == 0）。
+    assert solve({"capacity": 5, "values": [10], "weights": [5]}).value == 10
+
+    # 最优值能由**多个**容量列达到时，起点取**最小**列，结果才确定。这里 {0}
+    # 与 {1} 都达到 5（重量 1 与 2 都 <= 2）；取最大列会选成 [1]，于是
+    # selected_mask 与 item_set_hash 一起变——而后者是入库 CSV 的一列。
+    tie = solve({"capacity": 2, "values": [5, 5], "weights": [1, 2]})
+    assert tie.selected_indices == [0]
 ```
 
 - [ ] **Step 2: 跑测试确认它通过**
