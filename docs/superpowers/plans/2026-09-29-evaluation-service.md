@@ -740,17 +740,35 @@ from experiment.eval.metrics import (
 )
 from experiment.eval.reference import solve
 
-INSTANCE = {"capacity": 5, "values": [1, 1, 1], "weights": [3, 3, 3]}
+#: 两个实例把三类违例**分开**：容量充裕的那个只可能踩「重复」与「越界」，
+#: 容量吃紧的那个让「超容量」单独成立。
+#:
+#: 初稿只用一个 ``capacity=5, weights=[3,3,3]`` 的实例，六条断言里错了三条——
+#: 手算时忘了超容量会与另两类**叠加**：``[0,1]`` 的重量是 6 > 5，``[0,0]`` 是
+#: 重复 1 + 超容量 1 = 2，``[0,9,0,0]`` 是越界 1 + 重复 2 + 超容量 1 = 4。
+#: 拆成两个实例后，每条期望值都只有一个来源。
+TIGHT = {"capacity": 5, "values": [1, 1, 1], "weights": [3, 3, 3]}
+LOOSE = {"capacity": 100, "values": [1, 1, 1], "weights": [3, 3, 3]}
 
 
 def test_feasibility_counts_each_kind_of_violation_separately():
     """返回的是**条数**而不是布尔值，三类问题才不会塌缩成一个 False。"""
-    assert feasibility_violations(INSTANCE, [0, 1]) == 0
-    assert feasibility_violations(INSTANCE, [0, 0]) == 1        # 重复选择
-    assert feasibility_violations(INSTANCE, [0, 7]) == 1        # 选了不存在的物品
-    assert feasibility_violations(INSTANCE, [0, 1, 2]) == 1     # 超容量（9 > 5）
-    assert feasibility_violations(INSTANCE, [0, 9, 0, 0]) == 3  # 越界 1 + 重复 2
-    assert feasibility_violations(INSTANCE, []) == 0
+    # 容量充裕：只测「重复」与「越界」
+    assert feasibility_violations(LOOSE, [0, 1, 2]) == 0
+    assert feasibility_violations(LOOSE, []) == 0
+    assert feasibility_violations(LOOSE, [0, 0]) == 1        # 重复选择
+    assert feasibility_violations(LOOSE, [0, 7]) == 1        # 选了不存在的物品
+    assert feasibility_violations(LOOSE, [7, 8]) == 2        # 两次越界
+    assert feasibility_violations(LOOSE, [0, 9, 0, 0]) == 3  # 越界 1 + 重复 2
+
+    # 容量吃紧：超容量各算一条，并会与上面两类叠加
+    assert feasibility_violations(TIGHT, [0, 1]) == 1        # 6 > 5
+    assert feasibility_violations(TIGHT, [0, 1, 2]) == 1     # 9 > 5
+    assert feasibility_violations(TIGHT, [0, 0]) == 2        # 重复 1 + 超容量 1
+
+    # 同一个越界索引重复出现会**同时**计入「越界」与「重复」——它确实是两个
+    # 问题。这里显式钉住该语义，免得日后被当成 bug「修掉」。
+    assert feasibility_violations(LOOSE, [7, 7]) == 3
 
 
 def test_gaps_use_the_plan_percentage_scale():
@@ -815,6 +833,10 @@ def feasibility_violations(instance: Mapping, selected_indices: Sequence[int]) -
 
     刻意返回条数而不是布尔值：这样「选了不存在的物品」「重复选择」「超容量」
     三类问题可以分别计数，而不是塌缩成一个 False。
+
+    三类**独立计数、可以叠加**：同一个越界索引出现两次会计入 1 条越界 + 1 条
+    重复，一个超容量的选择若同时含重复物品则再 +1。这不是 bug——它确实是三个
+    问题——但它是个容易被「修掉」的语义，所以由测试显式钉住。
     """
     weights = instance["weights"]
     capacity = instance["capacity"]
