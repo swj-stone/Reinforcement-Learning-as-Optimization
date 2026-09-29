@@ -1,0 +1,464 @@
+{
+  "cells": [
+    {
+      "alpha": 0.25,
+      "n": 20,
+      "real": 500,
+      "split": "train",
+      "synthetic": 500
+    },
+    {
+      "alpha": 0.5,
+      "n": 20,
+      "real": 500,
+      "split": "train",
+      "synthetic": 500
+    },
+    {
+      "alpha": 0.75,
+      "n": 20,
+      "real": 500,
+      "split": "train",
+      "synthetic": 500
+    },
+    {
+      "alpha": 0.25,
+      "n": 50,
+      "real": 500,
+      "split": "train",
+      "synthetic": 500
+    },
+    {
+      "alpha": 0.5,
+      "n": 50,
+      "real": 500,
+      "split": "train",
+      "synthetic": 500
+    },
+    {
+      "alpha": 0.75,
+      "n": 50,
+      "real": 500,
+      "split": "train",
+      "synthetic": 500
+    },
+    {
+      "alpha": 0.25,
+      "n": 100,
+      "real": 500,
+      "split": "train",
+      "synthetic": 500
+    },
+    {
+      "alpha": 0.5,
+      "n": 100,
+      "real": 500,
+      "split": "train",
+      "synthetic": 500
+    },
+    {
+      "alpha": 0.75,
+      "n": 100,
+      "real": 500,
+      "split": "train",
+      "synthetic": 500
+    },
+    {
+      "alpha": 0.25,
+      "n": 200,
+      "real": 500,
+      "split": "train",
+      "synthetic": 500
+    },
+    {
+      "alpha": 0.5,
+      "n": 200,
+      "real": 500,
+      "split": "train",
+      "synthetic": 500
+    },
+    {
+      "alpha": 0.75,
+      "n": 200,
+      "real": 500,
+      "split": "train",
+      "synthetic": 500
+    },
+    {
+      "alpha": 0.25,
+      "n": 20,
+      "real": 100,
+      "split": "validation",
+      "synthetic": 100
+    },
+    {
+      "alpha": 0.5,
+      "n": 20,
+      "real": 100,
+      "split": "validation",
+      "synthetic": 100
+    },
+    {
+      "alpha": 0.75,
+      "n": 20,
+      "real": 100,
+      "split": "validation",
+      "synthetic": 100
+    },
+    {
+      "alpha": 0.25,
+      "n": 50,
+      "real": 100,
+      "split": "validation",
+      "synthetic": 100
+    },
+    {
+      "alpha": 0.5,
+      "n": 50,
+      "real": 100,
+      "split": "validation",
+      "synthetic": 100
+    },
+    {
+      "alpha": 0.75,
+      "n": 50,
+      "real": 100,
+      "split": "validation",
+      "synthetic": 100
+    },
+    {
+      "alpha": 0.25,
+      "n": 100,
+      "real": 100,
+      "split": "validation",
+      "synthetic": 100
+    },
+    {
+      "alpha": 0.5,
+      "n": 100,
+      "real": 100,
+      "split": "validation",
+      "synthetic": 100
+    },
+    {
+      "alpha": 0.75,
+      "n": 100,
+      "real": 100,
+      "split": "validation",
+      "synthetic": 100
+    },
+    {
+      "alpha": 0.25,
+      "n": 200,
+      "real": 100,
+      "split": "validation",
+      "synthetic": 100
+    },
+    {
+      "alpha": 0.5,
+      "n": 200,
+      "real": 100,
+      "split": "validation",
+      "synthetic": 100
+    },
+    {
+      "alpha": 0.75,
+      "n": 200,
+      "real": 100,
+      "split": "validation",
+      "synthetic": 100
+    },
+    {
+      "alpha": 0.25,
+      "n": 20,
+      "real": 100,
+      "split": "test",
+      "synthetic": 100
+    },
+    {
+      "alpha": 0.5,
+      "n": 20,
+      "real": 100,
+      "split": "test",
+      "synthetic": 100
+    },
+    {
+      "alpha": 0.75,
+      "n": 20,
+      "real": 100,
+      "split": "test",
+      "synthetic": 100
+    },
+    {
+      "alpha": 0.25,
+      "n": 50,
+      "real": 100,
+      "split": "test",
+      "synthetic": 100
+    },
+    {
+      "alpha": 0.5,
+      "n": 50,
+      "real": 100,
+      "split": "test",
+      "synthetic": 100
+    },
+    {
+      "alpha": 0.75,
+      "n": 50,
+      "real": 100,
+      "split": "test",
+      "synthetic": 100
+    },
+    {
+      "alpha": 0.25,
+      "n": 100,
+      "real": 100,
+      "split": "test",
+      "synthetic": 100
+    },
+    {
+      "alpha": 0.5,
+      "n": 100,
+      "real": 100,
+      "split": "test",
+      "synthetic": 100
+    },
+    {
+      "alpha": 0.75,
+      "n": 100,
+      "real": 100,
+      "split": "test",
+      "synthetic": 100
+    },
+    {
+      "alpha": 0.25,
+      "n": 200,
+      "real": 100,
+      "split": "test",
+      "synthetic": 100
+    },
+    {
+      "alpha": 0.5,
+      "n": 200,
+      "real": 100,
+      "split": "test",
+      "synthetic": 100
+    },
+    {
+      "alpha": 0.75,
+      "n": 200,
+      "real": 100,
+      "split": "test",
+      "synthetic": 100
+    }
+  ],
+  "counts": {
+    "test": {
+      "real": 1200,
+      "synthetic": 1200,
+      "total": 2400
+    },
+    "train": {
+      "real": 6000,
+      "synthetic": 6000,
+      "total": 12000
+    },
+    "validation": {
+      "real": 1200,
+      "synthetic": 1200,
+      "total": 2400
+    }
+  },
+  "dedup": {
+    "collisions_resampled": 0,
+    "distinct_canonical_hashes": 17700,
+    "max_attempt_used": 0,
+    "total_instances": 17700
+  },
+  "files": [
+    {
+      "bytes": 30631949,
+      "lines": 12000,
+      "path": "train/instances.jsonl",
+      "sha256": "3f23b2a1dbbf9f32c0cd96e5fe10091ed15aafbb480f84d45cd6cd92b3dbbc34"
+    },
+    {
+      "bytes": 6180123,
+      "lines": 2400,
+      "path": "validation/instances.jsonl",
+      "sha256": "979c95be1bdf79849185f9eefa307ad55ef280eccedbc9ff8b0580bc89f047a5"
+    },
+    {
+      "bytes": 6149370,
+      "lines": 2400,
+      "path": "test/instances.jsonl",
+      "sha256": "f9941352bccc8f2bc62aa7a04a8f1692bd3b264196d9bf3f35d827200ec5688c"
+    },
+    {
+      "bytes": 6963061,
+      "lines": 600,
+      "path": "stress/e3_size/instances.jsonl",
+      "sha256": "1d009b290118c9d0def373dbe6940d2aee6881d6a9d0c5fdc4592e10a86d204d"
+    },
+    {
+      "bytes": 880542,
+      "lines": 300,
+      "path": "stress/e4_tail/instances.jsonl",
+      "sha256": "72903673e86afb00da46221ea3db76502c8945c5f6ad03964be21db203ca2c8e"
+    }
+  ],
+  "generated_at": "2026-09-28T16:12:24Z",
+  "output_dir": "datasets/processed",
+  "provenance": {
+    "cleaning_rules": [
+      "cancellation_invoice",
+      "nonpositive_quantity_or_price",
+      "missing_required_field",
+      "invalid_timestamp",
+      "non_integer_quantity",
+      "invalid_stock_code",
+      "exact_duplicate_record",
+      "zero_value_pence"
+    ],
+    "collect_report": {
+      "bytes": 1279,
+      "path": "datasets/raw/real/collect_report.json",
+      "sha256": "0326b31e4ac0d7367c20dabde9b6e4687d424ecb82df621d5d456b59ba255424"
+    },
+    "generation_manifest": {
+      "bytes": 41183,
+      "generator_fingerprint": "c59e47b181b1ba21d9738db526cd48c15008120db20f3c830aa48af2d626e730",
+      "path": "datasets/raw/generation/manifest.json",
+      "sha256": "31e766e41a68dff66846d0a67b1fac6d85846443bb6ae1d050f234b859fd9f52"
+    },
+    "lots_clean": {
+      "bytes": 26995905,
+      "columns": [
+        "source_row_id",
+        "invoice_no",
+        "stock_code",
+        "invoice_date",
+        "quantity_w",
+        "unit_price",
+        "value_pence"
+      ],
+      "path": "datasets/raw/real/lots_clean.csv",
+      "rows": 522504,
+      "sha256": "1e7b2978df4585ea4fa4772ffe4ed2f8f2831e91386fdcedd6ae8ce49f433779"
+    },
+    "units": {
+      "value": "value_pence",
+      "weight": "quantity_w"
+    },
+    "workbook": {
+      "bytes": 23715344,
+      "sha256": "43465a06f2ccf7c8b5bd2892bc7defb52f97487934fe93b16ae4c3936424676d",
+      "url": "https://archive.ics.uci.edu/static/public/352/online+retail.zip"
+    }
+  },
+  "schema_version": 1,
+  "split_policy": {
+    "basis": "invoice earliest transaction calendar date",
+    "boundaries": {
+      "train_end_exclusive": 213,
+      "validation_end_exclusive": 259
+    },
+    "eligible_dates": {
+      "test": {
+        "100": 46,
+        "20": 46,
+        "200": 46,
+        "50": 46,
+        "500": 46
+      },
+      "train": {
+        "100": 213,
+        "20": 213,
+        "200": 213,
+        "50": 213,
+        "500": 209
+      },
+      "validation": {
+        "100": 46,
+        "20": 46,
+        "200": 46,
+        "50": 46,
+        "500": 46
+      }
+    },
+    "fractions": [
+      0.7,
+      0.85
+    ]
+  },
+  "splits": {
+    "test": {
+      "date_from": "2011-10-18",
+      "date_to": "2011-12-09",
+      "dates": 46,
+      "invoices": 4514,
+      "invoices_share": 0.228291104030749,
+      "lots": 134111,
+      "lots_share": 0.25666980539861894
+    },
+    "train": {
+      "date_from": "2010-12-01",
+      "date_to": "2011-08-23",
+      "dates": 213,
+      "invoices": 12068,
+      "invoices_share": 0.6103272138775098,
+      "lots": 299597,
+      "lots_share": 0.5733869979942737
+    },
+    "validation": {
+      "date_from": "2011-08-24",
+      "date_to": "2011-10-17",
+      "dates": 46,
+      "invoices": 3191,
+      "invoices_share": 0.16138168209174125,
+      "lots": 88796,
+      "lots_share": 0.16994319660710733
+    }
+  },
+  "streams": {
+    "core": {
+      "seed_key": {
+        "family": "real",
+        "split": "<per-split name>"
+      }
+    },
+    "size": {
+      "dataset": "e3_size",
+      "declared_master_seed": 4001,
+      "seed_key": {
+        "family": "<family> | real",
+        "split": "stream_size"
+      }
+    },
+    "tail": {
+      "dataset": "e4_tail",
+      "declared_master_seed": 5001,
+      "seed_key": {
+        "family": "skewed_e4",
+        "split": "stream_tail"
+      }
+    }
+  },
+  "stress": {
+    "e3_size": {
+      "real": 300,
+      "synthetic": 300
+    },
+    "e4_tail": {
+      "real": 0,
+      "synthetic": 300
+    }
+  },
+  "tail_thresholds": {
+    "basis": "train-split lots only",
+    "quantile": 0.99,
+    "quantity_w": "100",
+    "unit_price": "16.95"
+  }
+}

@@ -1,0 +1,189 @@
+budgets:
+  batch_size: 64
+  epsilon:
+    final: 0.05
+    initial: 1.0
+    linear_decay_transitions: 150000
+  grad_clip_global_norm: 10
+  learning_rate: 0.0003
+  loss: huber
+  optimizer: adam
+  pilot_transitions: 50000
+  replay_capacity: 100000
+  replay_source_balance:
+    real: 32
+    synthetic: 32
+  target_copy_transitions: 2000
+  training_seeds:
+  - 0
+  - 1
+  - 2
+  training_transitions: 300000
+  update_every_transitions: 4
+  validation_every_transitions: 25000
+  warmup_transitions: 5000
+cap_ratios:
+- 0.25
+- 0.5
+- 0.75
+evaluation:
+  aggregate: one-half synthetic mean + one-half real mean
+  bootstrap:
+    paired: true
+    resamples: 1000
+    unit: whole source dates for real; whole synthetic instances within cells
+  evaluation_seed: 6001
+  greedy: sort by descending v/w; ties by lower w then stable item ID
+  methods:
+  - random
+  - greedy
+  - dqn
+  metrics:
+  - feasibility
+  - exact_optimality_gap
+  - bound_based_gap
+  - relative_improvement
+  - speed
+  - learning_cost
+  - robustness
+  random_trials_per_instance: 10
+  reference:
+    cp_sat_limits:
+      seed: 0
+      time_seconds: 10
+      workers: 1
+    general: OR-Tools CP-SAT with binary item variables
+    note: an evaluation service, not a fourth competing method
+    small_cases: integer dynamic programming
+  rl: argmax feasible Q-value with exploration disabled; exact ties resolved by skipping
+  trivial_case: empty solution when no item fits; excluded from percentage denominators
+generated_at: '2026-09-28T16:12:24Z'
+generators:
+  correlated:
+    e: U(-10,10)
+    value: max(1, w + e)
+    weight: U(1,100)
+  normal:
+    clip:
+    - 1
+    - 100
+    distribution: Normal(50, 15^2)
+    mean: 50
+    rounding: half-up to nearest integer
+    sd: 15
+  skewed:
+    base_density:
+    - 1
+    - 5
+    base_weight:
+    - 1
+    - 20
+    heavy_density:
+    - 30
+    - 60
+    heavy_weight:
+    - 200
+    - 500
+    k: max(1, floor(0.05 * n + 0.5))
+    value: w * d
+  skewed_e4:
+    base_density:
+    - 1
+    - 5
+    base_weight:
+    - 1
+    - 20
+    heavy_density:
+    - 100
+    - 200
+    heavy_weight:
+    - 500
+    - 2000
+    k: 2
+    note: E4 variant; the frozen 'skewed' family is unchanged
+    value: w * d
+  uniform:
+    value: U(1,100)
+    weight: U(1,100)
+packages:
+  PyYAML: 6.0.2
+  numpy: 2.5.3
+  openpyxl: 3.1.5
+  pandas: 3.0.6
+  pytest: 9.1.1
+quotas:
+  real:
+    test: 100
+    train: 500
+    validation: 100
+  synthetic:
+    test: 25
+    train: 125
+    validation: 25
+real:
+  split_fractions:
+  - 0.7
+  - 0.85
+rl_environment:
+  action_masking: skip is always valid; infeasible include actions are masked in exploration,
+    inference, and the maximum used in the learning target
+  actions: include subtracts the resource requirement and earns the item's value;
+    skip earns zero
+  budget_escalation:
+    applies_to: all three seeds
+    condition: if 300000 transitions is insufficient and time allows
+    means: a validation-only decision, recorded
+    to_transitions: 1000000
+  budget_freeze: fix the final budget before viewing test metrics
+  checkpoint_selection:
+    basis: mean validation score V/U, where U is a fixed valid reference upper bound
+      for that instance
+    certified_optimum: U = V*; trivial zero-optimum cases are excluded from the ratio
+      and counted separately
+    never_select_on: test performance
+    source_weighting: weight sources equally; report cell-macro scores if quotas changed
+    tie_break: the earlier checkpoint
+  episode: each item is considered exactly once
+  gamma: 1
+  network:
+    encoder: shared two-layer, 64-unit ReLU over each remaining item's normalized
+      (w_i/C, v_i/sum(v))
+    excluded_from_inputs: IDs and source labels are not prediction features
+    head: 128-unit ReLU layer with two Q-value outputs
+    inputs_after_pooling:
+    - mean and max pooled embeddings
+    - the current item's normalized pair
+    - remaining_capacity/C
+    - remaining_count/n
+    - log(1+n)
+    pooling: only unprocessed items, including the current item; processed items and
+      padding excluded
+    terminal: terminal states bypass next-state evaluation
+  reward_shaping: for learning only, reward = v_i / sum_j(v_j) when including an item;
+    final selections are evaluated in the original units
+  sampling: sample repeatedly from the fixed training corpus; a balanced block takes
+    one instance per available (source, size) pair in random order, with capacity
+    ratios and synthetic families cycled evenly across blocks; cells marked unavailable
+    in the manifest are excluded
+  state: all item requirements/values, the current index, and the remaining capacity
+  termination: after the last item the episode terminates and the bootstrap term is
+    zero
+runtime:
+  python: 3.12.10
+schema_version: 1
+sizes:
+- 20
+- 50
+- 100
+- 200
+stress:
+  e3_size:
+    n: 500
+    real_per_alpha: 100
+    synthetic_per_family: 25
+  e4_tail:
+    families:
+    - skewed_e4
+    n: 200
+    per_alpha: 100
+    quantile_for_e4b: 0.99

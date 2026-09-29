@@ -245,6 +245,7 @@ for n in SIZES:
 {
   "schema_version": 1,
   "generated_at": "<ISO-8601 本地时间>",
+  "output_dir": "datasets/processed",
   "provenance": {
     "workbook":  {"url": ..., "sha256": ..., "bytes": ...},
     "lots_clean": {"path": ..., "sha256": ..., "bytes": ..., "rows": 522504},
@@ -290,10 +291,13 @@ for n in SIZES:
 
 - `split_policy.boundaries.validation = 259` 是 `floor(0.85 × 305)` 这个**上边界**，train 的 213 是下边界。写成两个独立数字而不是再存一份 `0.85`，是为了让校验者不必重做浮点下取整。
 - `splits.*.lots_share` 是**实测占比**，第 4 节明说它不必等于日期占比，所以要存下来供人核对而不是断言相等。
+- `provenance.*.path` 与 `output_dir` 一律写成**仓库相对**的 POSIX 路径（形如 `datasets/raw/collect/lots_clean.csv`），仓库外的路径保持绝对。写绝对路径会把 `C:/work/学校/...` 这类本机信息塞进**入库**的凭据里：换一台机器复核时，它既指向一棵不存在的目录树，也无法与复核者自己的工作区比对；而相对形式恰好就是复核者 `git status` 里看到的那个字符串。用 POSIX 分隔符是因为两个产物都是 JSON/YAML，读者可能在任何平台上，反斜杠在 JSON 里还要转义。
 
 ### 8.6 `experiment_config.yaml`
 
 第 10 节要求它记录"生成器公式、RL 设置、评估规则、预算、固定的包版本"。前三项是**转录**，不是重算：从 `EXPERIMENT_PLAN.md` 的第 2/6/7 节抄成结构化形式并存盘，好让后续阶段读 YAML 而不是读 Markdown。
+
+第 6 节贡献**两**个段，不是一段：那张表格进 `budgets`，而表格之外的正文——`gamma`、奖励整形、网络结构与动作掩码、平衡块采样、检查点选择、预算上调条款——进 `rl_environment`。只抄表格会让"RL 设置"这一项名不副实：表格里根本没有 `gamma`，也没有网络结构。
 
 ```yaml
 schema_version: 1
@@ -301,16 +305,19 @@ generators:            # 第 2 节四个族的分布公式与参数
   uniform: {weight: U(1,100), value: U(1,100)}
   normal:  {...}
   correlated: {...}
-  skewed:  {k: ..., heavy_weight: U(500,2000), heavy_density: U(1,20), base: ...}
+  skewed:  {k: ..., heavy_weight: U(200,500), heavy_density: U(30,60), base: ...}
   skewed_e4: {k: 2, heavy_weight: U(500,2000), heavy_density: U(100,200)}
 cap_ratios: [0.25, 0.50, 0.75]
 sizes: [20, 50, 100, 200]
-real: {quota: {train: 500, validation: 100, test: 100}, split_fractions: [0.70, 0.85]}
+quotas: {synthetic: {...}, real: {...}}   # 冻结的每 cell 配额
+real: {split_fractions: [0.70, 0.85]}
 evaluation:            # 第 7 节的评估口径
   methods: [random, greedy, dqn]
   reference: exact
   ...
-budgets: {...}         # 第 6 节的训练预算
+budgets: {...}         # 第 6 节的训练预算（那张表）
+rl_environment: {...}  # 第 6 节的**正文**：gamma=1、奖励整形 v_i/sum_j(v_j)、
+                       # 网络结构与动作掩码、平衡块采样、检查点选择、预算上调条款
 packages:              # 从 requirements.txt 转录的固定版本
   python: "3.12.x"
   numpy: "..."
@@ -351,7 +358,7 @@ packages:              # 从 requirements.txt 转录的固定版本
 
 **`generated_at` 是时钟**，因此 manifest 本身不是字节稳定的——只有五个 `instances.jsonl` 是。这与采集阶段的结论一致，验收表述必须限定到语料文件。
 
-为让测试跑得快，装配入口提供 `quota_override`，与 `run_generation` 的既有做法一致。
+为让测试跑得快，装配入口提供 `--synthetic-quota` 与 `--real-quota` 两个覆盖开关（分别覆盖"每族每 cell 的合成条数"与"每 cell 的真实条数"），语义与 `run_generation` 的既有做法一致。
 
 ## 11. 验收标准
 
