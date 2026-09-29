@@ -54,7 +54,7 @@
 
 | 事实 | 实测值 |
 | --- | --- |
-| 全语料 `solve`（**含**重建表）总耗时 | **16.0 s**（numpy DP + `(n+1)×(C+1)` int32 表） |
+| 全语料 `solve` 全程 | **13.5 s** = DP 建表与取值 10.8 s + 重建与自校验 0.5 s + 分数上界 `U` 1.9 s + 掩码/哈希与调用开销 |
 | 全语料实例数 | **17,700**（12000 + 2400 + 2400 + 600 + 300） |
 | 全语料 `U ≥ V*` 违例 | **0** |
 | 全语料平凡零最优（`V*=0`） | **0** |
@@ -1806,9 +1806,10 @@ cd "/c/work/学校/A.SPBU/Saint-peter-26/AI-2/project" && git add experiment/eva
 > The paragraph above says "integer dynamic programming for small cases ... or
 > OR-Tools CP-SAT ... for the general case". Measured on the frozen corpus, the
 > general case never arrives: the largest capacity is 41,328 (n=200; 21,201 at
-> n=500) and exact DP over all 17,700 instances takes 5.2 s for values alone and
-> 16.0 s including the reconstruction tables, on one machine. Every instance is
-> therefore solvable exactly, and `certified` is `true` for all of them.
+> n=500), and exact DP over all 17,700 instances is fast — 10.8 s to build the
+> table and read off the optimum, 0.5 s for reconstruction and the self-check,
+> 1.9 s for the fractional bound, 13.5 s in total, on one machine. Every instance
+> is therefore solvable exactly, and `certified` is `true` for all of them.
 >
 > Consequences, recorded rather than silently absorbed:
 >
