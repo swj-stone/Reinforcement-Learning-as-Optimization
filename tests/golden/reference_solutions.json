@@ -1,0 +1,95 @@
+{
+  "instances": [
+    {
+      "capacity": 9,
+      "item_set_hash": "df2d4757898e0ca107991603786c25d0d7f86e6e363bff9041b11b1e48933a0b",
+      "name": "three_item_unique_optimum",
+      "selected_indices": [
+        1,
+        2
+      ],
+      "upper_bound": "16.000000",
+      "value": 16,
+      "values": [
+        10,
+        7,
+        9
+      ],
+      "weights": [
+        8,
+        4,
+        5
+      ]
+    },
+    {
+      "capacity": 10,
+      "item_set_hash": "92cdf578c47085a5992256f0dcf97d0b19f1f1c9de4d5fe30c3ace6191b6e5db",
+      "name": "optimum_leaves_slack",
+      "selected_indices": [
+        1
+      ],
+      "upper_bound": "10.000000",
+      "value": 7,
+      "values": [
+        6,
+        7
+      ],
+      "weights": [
+        6,
+        7
+      ]
+    },
+    {
+      "capacity": 5,
+      "item_set_hash": "0fd923ca5e7218c4ba3c3801c26a617ecdbfdaebb9c76ce2eca166e7855efbb8",
+      "name": "tied_optimum_prefers_skipping",
+      "selected_indices": [
+        0
+      ],
+      "upper_bound": "7.000000",
+      "value": 7,
+      "values": [
+        7,
+        7
+      ],
+      "weights": [
+        5,
+        5
+      ]
+    },
+    {
+      "capacity": 9,
+      "item_set_hash": "0e5751c026e543b2e8ab2eb06099daa1d1e5df47778f7787faab45cdf12fe3a8",
+      "name": "trivial_no_item_fits",
+      "selected_indices": [],
+      "upper_bound": "4.500000",
+      "value": 0,
+      "values": [
+        5,
+        6
+      ],
+      "weights": [
+        10,
+        20
+      ]
+    },
+    {
+      "capacity": 4,
+      "item_set_hash": "92cdf578c47085a5992256f0dcf97d0b19f1f1c9de4d5fe30c3ace6191b6e5db",
+      "name": "fractional_fill_bound",
+      "selected_indices": [
+        1
+      ],
+      "upper_bound": "5.666667",
+      "value": 5,
+      "values": [
+        1,
+        5
+      ],
+      "weights": [
+        3,
+        2
+      ]
+    }
+  ]
+}
