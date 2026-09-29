@@ -740,8 +740,8 @@ from experiment.eval.metrics import (
 )
 from experiment.eval.reference import solve
 
-#: 两个实例把三类违例**分开**：容量充裕的那个只可能踩「重复」与「越界」，
-#: 容量吃紧的那个让「超容量」单独成立。
+#: 三个实例把三类违例**分开**：容量充裕的那个只可能踩「重复」与「越界」，
+#: 容量吃紧的那个让「超容量」单独成立，``WRAP`` 则专门区分求和守卫。
 #:
 #: 初稿只用一个 ``capacity=5, weights=[3,3,3]`` 的实例，六条断言里错了三条——
 #: 手算时忘了超容量会与另两类**叠加**：``[0,1]`` 的重量是 6 > 5，``[0,0]`` 是
@@ -749,6 +749,9 @@ from experiment.eval.reference import solve
 #: 拆成两个实例后，每条期望值都只有一个来源。
 TIGHT = {"capacity": 5, "values": [1, 1, 1], "weights": [3, 3, 3]}
 LOOSE = {"capacity": 100, "values": [1, 1, 1], "weights": [3, 3, 3]}
+#: 最后一件的重量（3）**大于**容量（2）：只有「负索引绕回末尾」才会把总和推过
+#: 容量，因此这是唯一能区分 ``0 <= i < n`` 与 ``i < n`` 两版求和守卫的构造。
+WRAP = {"capacity": 2, "values": [1, 1, 1], "weights": [1, 1, 3]}
 
 
 def test_feasibility_counts_each_kind_of_violation_separately():
@@ -769,6 +772,13 @@ def test_feasibility_counts_each_kind_of_violation_separately():
     # 同一个越界索引重复出现会**同时**计入「越界」与「重复」——它确实是两个
     # 问题。这里显式钉住该语义，免得日后被当成 bug「修掉」。
     assert feasibility_violations(LOOSE, [7, 7]) == 3
+
+    # 负索引**不会**绕回末尾去参与容量求和。``0 <= i < n`` 这个守卫做两件事：
+    # 挡住 IndexError，以及挡住 ``weights[-1]`` 被悄悄计入。前者由上面的
+    # ``[7, 8]`` 覆盖；后者**只有本实例能覆盖**——探针实测：上面十条断言在两版
+    # 守卫下取值完全相同，也就是说只写它们，守卫退化成 ``i < n`` 也照样全绿，
+    # 而那时 ``selected_indices=[-1]`` 会把最后一件的重量算进容量。
+    assert feasibility_violations(WRAP, [-1]) == 1  # 越界 1；权重不计入
 
 
 def test_gaps_use_the_plan_percentage_scale():
