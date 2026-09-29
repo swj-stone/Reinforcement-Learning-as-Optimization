@@ -156,6 +156,32 @@ If no item fits, all methods must return the empty solution: mark the case trivi
 
 Average normalized per-instance quality, not raw monetary values mixed with synthetic scores. First average random trials within an instance and summarize RL seeds separately. The primary aggregate is one-half of the synthetic instance mean plus one-half of the real instance mean. For uncertainty, use 1,000 paired bootstrap resamples: resample whole source dates with all their derived real instances, and whole synthetic instances within cells, keeping method outputs paired. Recompute the two source means separately and combine them with equal weights in every resample. This accounts for within-date dependence without treating repeated source records as independent business observations. Report training-seed variation separately from data-sampling uncertainty.
 
+> **Revision (2026-09-29) — the reference solver is integer DP, not CP-SAT.**
+>
+> The paragraph above says "integer dynamic programming for small cases ... or
+> OR-Tools CP-SAT ... for the general case". Measured on the frozen corpus, the
+> general case never arrives: the largest capacity is 41,328 (n=200; 21,201 at
+> n=500), and exact DP over all 17,700 instances is fast — 10.8 s to build the
+> table and read off the optimum, 0.5 s for reconstruction and the self-check,
+> 1.9 s for the fractional bound, 13.5 s in total, on one machine. Every instance
+> is therefore solvable exactly, and `certified` is `true` for all of them.
+>
+> Consequences, recorded rather than silently absorbed:
+>
+> - OR-Tools is **not** a dependency. The 10-second CP-SAT timeout, the `L`/`U`
+>   dual track, the certification rate, and the bound-based gap as a *fallback*
+>   never occur in the implementation. The `certified` column exists and is
+>   always `true`, so the artifact still matches this section's column list.
+> - The metric table above **stays in force**, with the exact optimality gap as
+>   the primary measure.
+> - `U` is still computed and still load-bearing: section 6 selects checkpoints
+>   on the mean validation score `V/U`. It is computed exactly, with
+>   `fractions.Fraction` and integer cross-multiplication for the ratio ordering,
+>   so that `U >= V*` is a theorem rather than a tolerance question.
+> - Trivial cases (no item fits) do occur in principle but not in this corpus:
+>   0 of 17,700 instances have `V* = 0`. That branch is covered by synthetic
+>   tests only, and the frequency is reported as zero rather than assumed away.
+
 ## 8. Experiment Matrix
 
 | ID | Data and run | Required output |
