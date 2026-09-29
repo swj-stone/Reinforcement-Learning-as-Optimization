@@ -1860,7 +1860,7 @@ cd "/c/work/学校/A.SPBU/Saint-peter-26/AI-2/project" && git add experiment/eva
 cd "/c/work/学校/A.SPBU/Saint-peter-26/AI-2/project" && git diff --stat EXPERIMENT_PLAN.md && grep -c "^## " EXPERIMENT_PLAN.md && grep -n "^## 8\. Experiment Matrix" EXPERIMENT_PLAN.md && sed -n '/^## 7\./,/^## 8\./p' EXPERIMENT_PLAN.md | grep -c "OR-Tools CP-SAT"
 ```
 
-Expected: 只有插入（`--stat` 显示若干 insertions、**0 deletions**）；`^## ` 计数仍为 **10**；第 8 节仍在；第 7 节里 `OR-Tools CP-SAT` 仍出现 **1** 次（原文未删）。
+Expected: 只有插入（`--stat` 显示若干 insertions、**0 deletions**）；`^## ` 计数仍为 **10**；第 8 节仍在；第 7 节里 `OR-Tools CP-SAT` 出现 **2** 次 —— 一次在第 141 行原文，一次在插入块**自己的引文**里（修订说明要引用原句，故该串必然出现两次；**原文未删**的直接证据是同一步的 **0 deletions**，不能是 1）。
 
 - [ ] **Step 3: 提交**
 
