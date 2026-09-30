@@ -48,13 +48,10 @@ evaluation:
   - robustness
   random_trials_per_instance: 10
   reference:
-    cp_sat_limits:
-      seed: 0
-      time_seconds: 10
-      workers: 1
-    general: OR-Tools CP-SAT with binary item variables
+    certified: true for every instance; no timeout fallback occurs
+    general: integer dynamic programming over capacity; exact on the frozen corpus
     note: an evaluation service, not a fourth competing method
-    small_cases: integer dynamic programming
+    revised: '2026-09-29: integer DP for all instances; OR-Tools is not a dependency'
   rl: argmax feasible Q-value with exploration disabled; exact ties resolved by skipping
   trivial_case: empty solution when no item fits; excluded from percentage denominators
 generated_at: '2026-09-28T16:12:24Z'

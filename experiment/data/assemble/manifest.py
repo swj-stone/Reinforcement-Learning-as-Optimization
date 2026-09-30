@@ -91,11 +91,18 @@ _EVALUATION: dict[str, object] = {
     ],
     "methods": ["random", "greedy", "dqn"],
     "random_trials_per_instance": 10,
+    # 2026-09-29 修订：参考解一律用整数 DP，不引入 OR-Tools。EXPERIMENT_PLAN.md §7
+    # 末尾记了实测依据（最大容量 41,328，17,700 个实例全部可精确求解）。原先这里
+    # 转录的是修订前的 §7，写着「小规模 DP、一般情形 OR-Tools CP-SAT + 10 秒超时」；
+    # 那与已入库的 reference_results.csv 直接矛盾——10 秒超时的 CP-SAT 不可能产出
+    # 17,700 行全 certified=true。转录必须跟着被转录的对象走。
     "reference": {
-        "cp_sat_limits": {"seed": 0, "time_seconds": 10, "workers": 1},
-        "general": "OR-Tools CP-SAT with binary item variables",
+        "certified": "true for every instance; no timeout fallback occurs",
+        "general": "integer dynamic programming over capacity; exact on the frozen corpus",
         "note": "an evaluation service, not a fourth competing method",
-        "small_cases": "integer dynamic programming",
+        "revised": (
+            "2026-09-29: integer DP for all instances; OR-Tools is not a dependency"
+        ),
     },
     "rl": "argmax feasible Q-value with exploration disabled; exact ties resolved by skipping",
     "trivial_case": "empty solution when no item fits; excluded from percentage denominators",
