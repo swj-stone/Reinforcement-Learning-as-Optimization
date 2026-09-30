@@ -203,7 +203,12 @@ Greedy 次序：整数叉乘排 `v_i/w_i` 降序，同分取更小的 `w`，再�
 | `experiment/eval/reference.py:43` | `_ratio_order` → `ratio_order`（改 def 与 docstring） |
 | `experiment/eval/reference.py:75` | **唯一**的生产调用点，同步改名 |
 | `tests/test_eval_upper_bound.py:8` | 导入改名 |
-| `tests/test_eval_upper_bound.py:71-80` | 一个测试函数内的 5 处引用改名（含测试名） |
+| `tests/test_eval_upper_bound.py:77-80` | 一个测试函数内的 **4 条断言**改名 |
+
+> 第 71 行的测试名 `test_ratio_order_breaks_ties_deterministically` **不需要改**：
+> 它之所以被 `_ratio_order` 的检索命中，只是因为它含有子串（`test` + `_ratio_order`
+> + …）。探针脚本实测到的正是这一类假命中——按「命中行数」而不是「需要改的位置数」
+> 报影响面，会把改动面报大。
 
 **文档，A 的实现计划里 6 处，一处都不改：** `2026-09-29-evaluation-service.md` 的第
 67 行（正文提到该函数）、128 行（测试 fence 的导入）、191–200 行（测试 fence 的名字与
