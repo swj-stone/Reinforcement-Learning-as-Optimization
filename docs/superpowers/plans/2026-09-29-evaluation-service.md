@@ -54,7 +54,7 @@
 
 | 事实 | 实测值 |
 | --- | --- |
-| 全语料 `solve`（**含**重建表）总耗时 | **16.0 s**（numpy DP + `(n+1)×(C+1)` int32 表） |
+| 全语料 `solve` 全程 | **13.5 s** = DP 建表与取值 10.8 s + 重建与自校验 0.5 s + 分数上界 `U` 1.9 s + 掩码/哈希与调用开销 |
 | 全语料实例数 | **17,700**（12000 + 2400 + 2400 + 600 + 300） |
 | 全语料 `U ≥ V*` 违例 | **0** |
 | 全语料平凡零最优（`V*=0`） | **0** |
@@ -673,6 +673,31 @@ def solve(instance: Mapping) -> ReferenceSolution:
     )
 ```
 
+- [ ] **Step 3b: 给 `format_upper_bound` 补上前置条件说明**
+
+Task 1 的代码评审发现：`format_upper_bound` 的 docstring 说「向上取整」，但 `-(-n // d)` 只在**非负**时才是向上取整。实测 `format_upper_bound(Fraction(-1,3))` 返回 `-1.666667`，而 `-1/3` 的六位小数上界应为 `-0.333333`——是一个**静默的错值**。
+
+本项目里 `U >= 0` 由构造保证（权重非负 ⇒ `remaining >= 0`；价值非负 ⇒ 每个加数非负），所以**不设运行时断言**——那是为一个不可能出现的状态写守卫。改为把前置条件写进 docstring。把 `format_upper_bound` 的 docstring 替换为：
+
+```python
+    """把 U 写成**向上取整**到 6 位小数的十进制字符串。
+
+    向上取整而非四舍五入或下取整：存储后的值必须仍是一个合法上界。
+
+    用整数运算而不是 ``decimal``：decimal 的上下文精度会变成一个隐式的输入，
+    而这里没有理由引入它。
+
+    **前置条件：``upper_bound >= 0``。** ``-(-n // d)`` 只在非负时才有「向上
+    取整」的含义；负数会得到一个静默的错值（实测
+    ``format_upper_bound(Fraction(-1, 3))`` 返回 ``-1.666667``，而 ``-1/3`` 的
+    六位小数上界是 ``-0.333333``）。本项目里 ``U >= 0`` 由构造保证（权重与价值
+    都非负），所以这里不设运行时断言——那是为一个不可能出现的状态写守卫；改为
+    把前置条件写在这里，让调用方看得见。
+    """
+```
+
+只改 docstring，一行代码都不动。
+
 - [ ] **Step 4: 跑测试确认它通过**
 
 ```bash
@@ -715,17 +740,45 @@ from experiment.eval.metrics import (
 )
 from experiment.eval.reference import solve
 
-INSTANCE = {"capacity": 5, "values": [1, 1, 1], "weights": [3, 3, 3]}
+#: 三个实例把三类违例**分开**：容量充裕的那个只可能踩「重复」与「越界」，
+#: 容量吃紧的那个让「超容量」单独成立，``WRAP`` 则专门区分求和守卫。
+#:
+#: 初稿只用一个 ``capacity=5, weights=[3,3,3]`` 的实例，六条断言里错了三条——
+#: 手算时忘了超容量会与另两类**叠加**：``[0,1]`` 的重量是 6 > 5，``[0,0]`` 是
+#: 重复 1 + 超容量 1 = 2，``[0,9,0,0]`` 是越界 1 + 重复 2 + 超容量 1 = 4。
+#: 拆成两个实例后，每条期望值都只有一个来源。
+TIGHT = {"capacity": 5, "values": [1, 1, 1], "weights": [3, 3, 3]}
+LOOSE = {"capacity": 100, "values": [1, 1, 1], "weights": [3, 3, 3]}
+#: 最后一件的重量（3）**大于**容量（2）：只有「负索引绕回末尾」才会把总和推过
+#: 容量，因此这是唯一能区分 ``0 <= i < n`` 与 ``i < n`` 两版求和守卫的构造。
+WRAP = {"capacity": 2, "values": [1, 1, 1], "weights": [1, 1, 3]}
 
 
 def test_feasibility_counts_each_kind_of_violation_separately():
     """返回的是**条数**而不是布尔值，三类问题才不会塌缩成一个 False。"""
-    assert feasibility_violations(INSTANCE, [0, 1]) == 0
-    assert feasibility_violations(INSTANCE, [0, 0]) == 1        # 重复选择
-    assert feasibility_violations(INSTANCE, [0, 7]) == 1        # 选了不存在的物品
-    assert feasibility_violations(INSTANCE, [0, 1, 2]) == 1     # 超容量（9 > 5）
-    assert feasibility_violations(INSTANCE, [0, 9, 0, 0]) == 3  # 越界 1 + 重复 2
-    assert feasibility_violations(INSTANCE, []) == 0
+    # 容量充裕：只测「重复」与「越界」
+    assert feasibility_violations(LOOSE, [0, 1, 2]) == 0
+    assert feasibility_violations(LOOSE, []) == 0
+    assert feasibility_violations(LOOSE, [0, 0]) == 1        # 重复选择
+    assert feasibility_violations(LOOSE, [0, 7]) == 1        # 选了不存在的物品
+    assert feasibility_violations(LOOSE, [7, 8]) == 2        # 两次越界
+    assert feasibility_violations(LOOSE, [0, 9, 0, 0]) == 3  # 越界 1 + 重复 2
+
+    # 容量吃紧：超容量各算一条，并会与上面两类叠加
+    assert feasibility_violations(TIGHT, [0, 1]) == 1        # 6 > 5
+    assert feasibility_violations(TIGHT, [0, 1, 2]) == 1     # 9 > 5
+    assert feasibility_violations(TIGHT, [0, 0]) == 2        # 重复 1 + 超容量 1
+
+    # 同一个越界索引重复出现会**同时**计入「越界」与「重复」——它确实是两个
+    # 问题。这里显式钉住该语义，免得日后被当成 bug「修掉」。
+    assert feasibility_violations(LOOSE, [7, 7]) == 3
+
+    # 负索引**不会**绕回末尾去参与容量求和。``0 <= i < n`` 这个守卫做两件事：
+    # 挡住 IndexError，以及挡住 ``weights[-1]`` 被悄悄计入。前者由上面的
+    # ``[7, 8]`` 覆盖；后者**只有本实例能覆盖**——探针实测：上面十条断言在两版
+    # 守卫下取值完全相同，也就是说只写它们，守卫退化成 ``i < n`` 也照样全绿，
+    # 而那时 ``selected_indices=[-1]`` 会把最后一件的重量算进容量。
+    assert feasibility_violations(WRAP, [-1]) == 1  # 越界 1；权重不计入
 
 
 def test_gaps_use_the_plan_percentage_scale():
@@ -790,6 +843,10 @@ def feasibility_violations(instance: Mapping, selected_indices: Sequence[int]) -
 
     刻意返回条数而不是布尔值：这样「选了不存在的物品」「重复选择」「超容量」
     三类问题可以分别计数，而不是塌缩成一个 False。
+
+    三类**独立计数、可以叠加**：同一个越界索引出现两次会计入 1 条越界 + 1 条
+    重复，一个超容量的选择若同时含重复物品则再 +1。这不是 bug——它确实是三个
+    问题——但它是个容易被「修掉」的语义，所以由测试显式钉住。
     """
     weights = instance["weights"]
     capacity = instance["capacity"]
@@ -1320,7 +1377,8 @@ def test_item_set_hash_depends_on_the_set_not_the_list_order():
 
 
 def test_adversarial_shapes_keep_the_bound_and_the_reconstruction_valid():
-    """边界形状：容量 0、一件都整件装不下、同比值并列、零重量的物品。
+    """边界形状：容量 0、一件都整件装不下、同比值并列、零重量的物品、
+    重量恰好等于容量的物品、最优值可由多个容量列达到。
 
     这些形状真实语料里一个都没有（实测平凡解 0/17700），所以必须合成。
     """
@@ -1343,6 +1401,21 @@ def test_adversarial_shapes_keep_the_bound_and_the_reconstruction_valid():
             sum(instance["weights"][i] for i in chosen) <= instance["capacity"]
         ), instance
         assert sum(instance["values"][i] for i in chosen) == result.value, instance
+
+    # 下面两条**必须钉住具体期望值**，不能走上面的自洽循环：自洽断言对
+    # 「一件都没装进去」同样成立，因此对这两个缺陷一律沉默。两条都已在两版
+    # 变异体上探针验证过（`wi <= capacity` → `wi < capacity`；重建起点取最大
+    # 列而非最小列）。
+
+    # 重量**恰好**等于容量的物品必须能被选上。变异体把它整件丢掉，V* 由 10
+    # 变成 0，而自洽断言照样全绿（空集重量 0 <= 5、价值 0 == 0）。
+    assert solve({"capacity": 5, "values": [10], "weights": [5]}).value == 10
+
+    # 最优值能由**多个**容量列达到时，起点取**最小**列，结果才确定。这里 {0}
+    # 与 {1} 都达到 5（重量 1 与 2 都 <= 2）；取最大列会选成 [1]，于是
+    # selected_mask 与 item_set_hash 一起变——而后者是入库 CSV 的一列。
+    tie = solve({"capacity": 2, "values": [5, 5], "weights": [1, 2]})
+    assert tie.selected_indices == [0]
 ```
 
 - [ ] **Step 2: 跑测试确认它通过**
@@ -1670,7 +1743,7 @@ Expected（数值来自设计探针的实测，允许机器差异）：
 ```
 实例数:     17700
 平凡解:     0（已从百分比分母剔除）
-求解总耗时: ~16 s
+求解总耗时: ~14 s（2026-09-29 本机实测 13.5 s；其中分数上界 2.0 s。设计 §2 的表已同步为该值）
 ```
 
 若 `U >= V*` 有任何违例，`run()` 会直接抛 `AssertionError`——那说明实现有 bug，停下来报告。
@@ -1759,9 +1832,10 @@ cd "/c/work/学校/A.SPBU/Saint-peter-26/AI-2/project" && git add experiment/eva
 > The paragraph above says "integer dynamic programming for small cases ... or
 > OR-Tools CP-SAT ... for the general case". Measured on the frozen corpus, the
 > general case never arrives: the largest capacity is 41,328 (n=200; 21,201 at
-> n=500) and exact DP over all 17,700 instances takes 5.2 s for values alone and
-> 16.0 s including the reconstruction tables, on one machine. Every instance is
-> therefore solvable exactly, and `certified` is `true` for all of them.
+> n=500), and exact DP over all 17,700 instances is fast — 10.8 s to build the
+> table and read off the optimum, 0.5 s for reconstruction and the self-check,
+> 1.9 s for the fractional bound, 13.5 s in total, on one machine. Every instance
+> is therefore solvable exactly, and `certified` is `true` for all of them.
 >
 > Consequences, recorded rather than silently absorbed:
 >
@@ -1786,7 +1860,7 @@ cd "/c/work/学校/A.SPBU/Saint-peter-26/AI-2/project" && git add experiment/eva
 cd "/c/work/学校/A.SPBU/Saint-peter-26/AI-2/project" && git diff --stat EXPERIMENT_PLAN.md && grep -c "^## " EXPERIMENT_PLAN.md && grep -n "^## 8\. Experiment Matrix" EXPERIMENT_PLAN.md && sed -n '/^## 7\./,/^## 8\./p' EXPERIMENT_PLAN.md | grep -c "OR-Tools CP-SAT"
 ```
 
-Expected: 只有插入（`--stat` 显示若干 insertions、**0 deletions**）；`^## ` 计数仍为 **10**；第 8 节仍在；第 7 节里 `OR-Tools CP-SAT` 仍出现 **1** 次（原文未删）。
+Expected: 只有插入（`--stat` 显示若干 insertions、**0 deletions**）；`^## ` 计数仍为 **10**；第 8 节仍在；第 7 节里 `OR-Tools CP-SAT` 出现 **2** 次 —— 一次在第 141 行原文，一次在插入块**自己的引文**里（修订说明要引用原句，故该串必然出现两次；**原文未删**的直接证据是同一步的 **0 deletions**，不能是 1）。
 
 - [ ] **Step 3: 提交**
 
