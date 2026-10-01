@@ -40,7 +40,7 @@ _SENTINEL = -(2**29)
 _VALUE_SUM_LIMIT = -_SENTINEL  # 2**29
 
 
-def _ratio_order(weights: Sequence[int], values: Sequence[int]) -> list[int]:
+def ratio_order(weights: Sequence[int], values: Sequence[int]) -> list[int]:
     """按 ``v_i / w_i`` 降序返回物品索引，**用精确整数叉乘**。
 
     走浮点除法是错的：两个不同的有理比值可能舍入到同一个 double，比较结果就
@@ -49,6 +49,12 @@ def _ratio_order(weights: Sequence[int], values: Sequence[int]) -> list[int]:
 
     次级键依次取更小的 ``w``、再取原索引升序，使完整排序确定，U 不依赖
     ``sort`` 的稳定性。
+
+    **公开是因为它同时是 Greedy 基线的次序**（`EXPERIMENT_PLAN.md` 第 5 节）：
+    分数背包的贪心与经典 0/1 贪心按同一个比值序扫描。两份实现会在某次修订后
+    分歧，而分歧的症状是「上界与贪心用了不同的次序」——一个不报错、不崩溃、
+    只在数字上体现的偏差。见
+    `docs/superpowers/specs/2026-09-30-baselines-design.md` §6。
     """
 
     def compare(i: int, j: int) -> int:
@@ -72,7 +78,7 @@ def fractional_upper_bound(
     ``v`` 与 ``w`` 都是整数，所以 U 是一个有理数，可以用 ``Fraction`` 精确表示；
     这使 ``U >= V*`` 是**定理**而不是容差问题，``V/U <= 1`` 由构造保证。
     """
-    order = _ratio_order(weights, values)
+    order = ratio_order(weights, values)
     remaining = capacity
     total = Fraction(0)
     for i in order:

@@ -5,7 +5,7 @@ from fractions import Fraction
 import pytest
 
 from experiment.eval.reference import (
-    _ratio_order,
+    ratio_order,
     format_upper_bound,
     fractional_upper_bound,
 )
@@ -74,10 +74,10 @@ def test_ratio_order_breaks_ties_deterministically():
     次级键无法通过 U 来测：比值完全相等时价值与重量成正比，任何装法都给出
     同一个 U。所以它必须在排序函数本身上测。
     """
-    assert _ratio_order([1, 2], [2, 4]) == [0, 1]              # 同比值：w 小者先
-    assert _ratio_order([2, 1], [4, 2]) == [1, 0]              # 打乱输入，仍取 w 小的那件
-    assert _ratio_order([5, 5, 5], [7, 7, 7]) == [0, 1, 2]     # 全同：按原索引
-    assert _ratio_order([1, 3, 2], [3, 1, 2]) == [0, 2, 1]     # 比值 3、1/3、1
+    assert ratio_order([1, 2], [2, 4]) == [0, 1]              # 同比值：w 小者先
+    assert ratio_order([2, 1], [4, 2]) == [1, 0]              # 打乱输入，仍取 w 小的那件
+    assert ratio_order([5, 5, 5], [7, 7, 7]) == [0, 1, 2]     # 全同：按原索引
+    assert ratio_order([1, 3, 2], [3, 1, 2]) == [0, 2, 1]     # 比值 3、1/3、1
 
 
 def test_storage_rounds_up_to_six_decimals():
