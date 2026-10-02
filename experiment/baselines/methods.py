@@ -71,3 +71,42 @@ def greedy_solution(instance: Mapping) -> BaselineSolution:
         remaining -= weights[i]
     selected.sort()
     return BaselineSolution(tuple(selected), *_totals(instance, selected))
+
+
+def random_solution(instance: Mapping, seed: int) -> BaselineSolution:
+    """随机基线：沿实例自带的 ``item_order`` 走一遍，逐件掷硬币。
+
+    ``item_order`` 是实例记录里的**存储排列**（计划 §5 的 "stored item
+    permutation"）：`generate/corpus.py` 与 `assemble/{real,stress}.py` 都由一条
+    独立的 order 随机流生成它。它在 10 次试验之间**固定不变**，所以一次试验是沿
+    它走，而不是沿索引 ``0..n-1`` 走——后者产出的仍是一个确定的、可复现的 CSV，
+    只是它不是计划描述的那个实验。
+
+    **只有装得下的物品才铸币**（设计 §2.2 的读法 (a)）。读法 (b)（每件都掷、
+    装不下才丢弃）同样确定、同样跨版本可复现，所以"种子可复现"这条验收**区分不了**
+    两者；区分靠 ``tests/test_baselines_random.py`` 里的对照实现。
+
+    **平均由 D 做，本函数不取最好**：计划 §5 的 "Average outcomes rather than
+    selecting the best trial" 是一句禁令，best-of-ten 同样确定、同样可复现，
+    只是数字好看得多。
+
+    随机源的用法（设计 §2.2，三条都是可复现性的依据）：
+      - 种子传 **int**，不传 ``str``/``bytes``：``random.seed`` 对 ``str``/``bytes``
+        的哈希经历过 ``version=`` 语义变更；
+      - 用 ``random()`` 而不是 ``getrandbits()``：标准库保证 ``random()`` 在给定
+        兼容种子时**跨版本产出同一序列**；
+      - 用**实例化**的 ``Random(seed)``，不用模块级的 ``random.seed()``：后者是
+        全局状态，会把"这一次试验"绑定到调用顺序上，并让并行的测试互相污染。
+    """
+    weights = instance["weights"]
+    rng = random.Random(seed)
+    remaining = instance["capacity"]
+    selected: list[int] = []
+    for i in instance["item_order"]:
+        if weights[i] > remaining:
+            continue  # 装不下：跳过，**不铸币**
+        if rng.random() < 0.5:  # 装得下才铸币
+            selected.append(i)
+            remaining -= weights[i]
+    selected.sort()
+    return BaselineSolution(tuple(selected), *_totals(instance, selected))
