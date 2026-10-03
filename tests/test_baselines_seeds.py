@@ -21,9 +21,13 @@ def test_the_seed_is_the_measured_literal():
 def test_seed_is_stable_across_processes():
     """**跨进程**稳定：全新解释器里给出同一个种子。
 
-    进程内比较是测不出来的：``hash(str)`` 每个进程用不同的随机盐，同一个进程
-    里当然自洽。用 ``hash()`` 的实现会让每一次运行都产出不同的
-    ``baseline_results.csv``，而上一条测试照样通过。
+    **它断言的字面量与 ``test_the_seed_is_the_measured_literal`` 是同一个**，所以
+    它不是那个字面量的独立证据：那一条已经足以挡下 ``hash()`` 实现——``hash(str)``
+    每个进程用不同的随机盐，进程内的取值同样不可能等于写死的字面量（那一条测试
+    会红，靠的是这个，不是本条的跨进程比较）。
+
+    它真正多提供的是：派生在**独立进程**里成立，即不依赖本进程内积累的任何状态
+    ——模块级计数器、别的测试留下的 ``random.seed()``、导入顺序。
 
     子进程的 ``cwd`` 设成仓库根目录，``python -c`` 才会把 ``experiment`` 放进
     ``sys.path``。

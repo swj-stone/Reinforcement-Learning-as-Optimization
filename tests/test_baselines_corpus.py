@@ -11,7 +11,9 @@ from fractions import Fraction
 import pytest
 
 from experiment.baselines import cli
+from experiment.baselines.methods import greedy_solution, random_solution
 from experiment.data.spec import DATASETS_PROCESSED, REPO_ROOT
+from experiment.eval.reference import item_set_hash
 
 #: `datasets/` 被 gitignore，临时副本里没有它。本项目的完成标准是**真仓库里
 #: 0 skipped**，而这个仓库里语料是在的，所以这条测试在本机真跑；在没有语料的副本
@@ -129,3 +131,77 @@ def test_greedy_average_quality_is_strictly_above_random(results, reference):
     greedy = sum(scored["greedy"]) / len(scored["greedy"])
     random_ = sum(scored["random"]) / len(scored["random"])
     assert greedy > random_
+
+
+def test_the_config_matches_the_numbers_this_file_hardcodes():
+    """``experiment_config.yaml`` 的两个值必须与本文硬编码的一致。
+
+    本文件**绕过** ``cli.main()`` 直接调 ``cli.run``，所以 ``SEED`` / ``TRIALS`` 是
+    写死的。没有这一条时，把 YAML 改成 12 次试验会让**入库产物**变成 13 行/实例，
+    而"全语料验收"仍然全绿——因为 ``ROWS = INSTANCES * (TRIALS + 1)`` 与传给
+    ``run`` 的 ``trials=TRIALS`` 是**同一个常量**，改一处两边同变、永远自洽。
+    """
+    assert cli.read_config(cli.DEFAULT_CONFIG) == (SEED, TRIALS)
+
+
+def test_the_observation_columns_are_recomputed_from_the_corpus(results):
+    """**独立重算**产物里的三列观测，逐行比对。
+
+    没有这一条时，把 ``weight_used`` 或 ``item_set_hash`` 写成常量能让**全部 48 条**
+    基线测试通过：那两个量在 ``BaselineSolution`` **对象**上被测过，但
+    ``_solution_row`` 会把它们**重新取一次**写进 CSV——这一跳此前没有任何断言。
+
+    Random 行用**产物自带的 ``seed`` 列**重算（设计 §8：写进产物就是为了让复核者
+    不必重跑就能重算任意一行）。
+    """
+    _, rows = results
+    instances = {
+        instance["instance_id"]: instance
+        for _, instance in cli.read_instances(cli.corpus_files(DATASETS_PROCESSED))
+    }
+    for row in rows:
+        instance = instances[row["instance_id"]]
+        if row["method"] == "greedy":
+            solution = greedy_solution(instance)
+        else:
+            solution = random_solution(instance, int(row["seed"]))
+        assert (row["value"], row["weight_used"], row["item_set_hash"]) == (
+            str(solution.value),
+            str(solution.weight_used),
+            item_set_hash(solution.selected_indices),
+        ), row
+
+
+def test_the_ten_random_trials_are_not_all_the_same_solution(results):
+    """一个实例的 10 次试验必须真的给出**不同**的解。
+
+    没有这一条时，把 ``cli.run`` 里的 ``random_solution(instance, seed)`` 写成
+    ``random_solution(instance, evaluation_seed)`` 会让 10 次试验退化成同一个解，
+    而 ``seed`` 列仍然写派生值——**一个这次运行从未使用过的种子**，
+    48 条基线测试全绿。
+
+    只断言"至少 2 种互异"，不写死更多：实测最少的实例也有 **6 种**，余量很大。
+    """
+    _, rows = results
+    by_instance: dict[str, set] = {}
+    for row in rows:
+        if row["method"] != "random":
+            continue
+        key = (row["value"], row["weight_used"], row["item_set_hash"])
+        by_instance.setdefault(row["instance_id"], set()).add(key)
+    assert len(by_instance) == INSTANCES
+    degenerate = sorted(i for i, keys in by_instance.items() if len(keys) < 2)
+    assert degenerate == [], f"这些实例的 10 次试验全都相同：{degenerate[:5]}"
+
+
+def test_the_latency_column_is_measured_not_constant(results):
+    """``latency_s`` 必须是**测出来**的，不能是常量。
+
+    ``test_only_the_latency_column_is_unstable`` 只断言"其余列相同"，**从不要求
+    latency 自己变化**——把这一列冻结成 ``"0.000000"`` 能让全部基线测试通过，
+    而子项目 D 的 speed 指标会静默变成 0。
+
+    实测全语料有 **276** 个互异取值，所以"多于 1 个"这个判据余量极大。
+    """
+    _, rows = results
+    assert len({row["latency_s"] for row in rows}) > 1

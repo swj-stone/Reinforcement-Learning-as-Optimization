@@ -27,6 +27,24 @@ E3_INSTANCES = [
 #: 计时测试用的规模：要让"一次构造"明显高于计时器噪声，又不拖慢套件。
 TIMING_N = 400
 
+#: 产物的列序**逐字**写在这里，而不是只跟 ``cli.COLUMNS`` 比。
+#:
+#: 只跟 ``cli.COLUMNS`` 比是**自指**的——``DictWriter(fieldnames=cli.COLUMNS)``
+#: 写出的表头必然等于它，所以把 ``COLUMNS`` 里两列对调，那条断言照样通过。
+#: 子项目 A 的 ``tests/test_eval_cli.py`` 是同一写法（同一处缺口，尚未修）。
+EXPECTED_COLUMNS = (
+    "instance_id",
+    "split",
+    "method",
+    "trial",
+    "seed",
+    "value",
+    "weight_used",
+    "violations",
+    "item_set_hash",
+    "latency_s",
+)
+
 
 @pytest.fixture
 def corpus(tmp_path):
@@ -122,7 +140,8 @@ def test_column_order_and_bytes_are_fixed(corpus, config, tmp_path):
     assert raw.endswith(b"\n") and not raw.endswith(b"\n\n")
 
     with out.open(encoding="utf-8", newline="") as handle:
-        assert next(csv.reader(handle)) == list(cli.COLUMNS)
+        assert list(cli.COLUMNS) == list(EXPECTED_COLUMNS)
+        assert next(csv.reader(handle)) == list(EXPECTED_COLUMNS)
 
 
 def test_greedy_has_one_row_per_instance_with_no_seed(corpus, config, tmp_path):
