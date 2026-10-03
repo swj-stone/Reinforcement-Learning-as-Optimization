@@ -1,0 +1,45 @@
+{
+  "cleaning": {
+    "dropped_by_reason": {
+      "cancellation_invoice": 9288,
+      "exact_duplicate_record": 5221,
+      "invalid_stock_code": 2379,
+      "invalid_timestamp": 0,
+      "missing_required_field": 0,
+      "non_integer_quantity": 0,
+      "nonpositive_quantity_or_price": 2517,
+      "zero_value_pence": 0
+    },
+    "identity_holds": true,
+    "rules": [
+      "cancellation_invoice",
+      "nonpositive_quantity_or_price",
+      "missing_required_field",
+      "invalid_timestamp",
+      "non_integer_quantity",
+      "invalid_stock_code",
+      "exact_duplicate_record",
+      "zero_value_pence"
+    ]
+  },
+  "generated_at": "2026-09-28T08:18:13Z",
+  "kept_rows": 522504,
+  "lots_columns": [
+    "source_row_id",
+    "invoice_no",
+    "stock_code",
+    "invoice_date",
+    "quantity_w",
+    "unit_price",
+    "value_pence"
+  ],
+  "raw_rows": 541909,
+  "schema_version": 1,
+  "source": {
+    "lots_sha256": "1e7b2978df4585ea4fa4772ffe4ed2f8f2831e91386fdcedd6ae8ce49f433779",
+    "url": "https://archive.ics.uci.edu/static/public/352/online+retail.zip",
+    "xlsx_bytes": 23715344,
+    "xlsx_sha256": "43465a06f2ccf7c8b5bd2892bc7defb52f97487934fe93b16ae4c3936424676d",
+    "zip_sha256": "f5385cbb54bbebf7196389109c6b0621faab0c304e3702548165e71c84aede8b"
+  }
+}

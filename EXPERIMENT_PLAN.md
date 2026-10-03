@@ -3,7 +3,7 @@
 **Course:** Artificial Intelligence in Operations Research — Seminar  
 **Author:** Wenjie SHI  
 **Supervisor:** Chi ZHAO  
-**Status:** Protocol for implementation; no experimental results are claimed.  
+**Status:** The core study is complete: three formal DQN seeds, E0–E4b verification/comparisons, figures and [the experimental report](EXPERIMENT_REPORT.md). Each seed completed 300,440 transitions under the frozen 300,000-transition budget. E5 and additional domains were not run.
 **Schedule:** Two weeks, with optional extensions after the core experiment.
 
 ## 1. Objective and Fixed Scope
@@ -33,7 +33,7 @@ For every family, generate `n in {20, 50, 100, 200}` and `alpha in {0.25, 0.50, 
 
 The two rare-index sets in the skewed family are sampled independently and may overlap. Each set contains approximately 5% of items, subject to integer rounding. This is **item-distribution imbalance**, not a classification-label imbalance. Do not remove the extreme observations after generation. Record actual top-5% weight/value shares, maximum-to-median ratios, and coefficient of variation to describe the generated skew rather than assuming a particular concentration.
 
-Use separate generator streams for train/validation/test: master seeds `1001/2001/3001`. Derive per-instance seeds from the split, family, size, capacity ratio, and instance index. Reject duplicate canonical instance hashes across splits, including copies with reordered items.
+Use separate generator streams for train/validation/test. The frozen implementation derives per-instance seeds with BLAKE2b from the split, family, size, capacity ratio, instance index, resampling attempt and stream label. The originally declared numeric master seeds `1001/2001/3001` are documentary labels, not inputs to that hash, as recorded in the September 28 frozen-corpus design. Preserve this implemented derivation to retain the golden corpus. Reject duplicate canonical instance hashes across splits, including copies with reordered items.
 
 ## 3. Public Real Data and the Optimization Mapping
 
@@ -132,7 +132,7 @@ To support different sizes, encode each remaining item's normalized pair `(w_i/C
 
 Sample repeatedly from the fixed training corpus; 12,000 distinct available instances do not mean 12,000 episodes will be completed. A balanced block samples one instance for each available `(source, size)` pair, in random order, with supported capacity ratios and synthetic families cycled evenly across blocks. Exclude cells marked unavailable in the manifest. This preserves 50:50 episode exposure and balances transition counts by source. Report actual episodes, unique instances seen, and transitions per source/size. Replay batches additionally enforce 50:50 source exposure.
 
-Compute and cache validation references before the pilot. Select each seed's checkpoint using the mean validation score `V/U`, where `U` is a fixed valid reference upper bound for that instance. For a certified optimum, `U=V*`; exclude trivial zero-optimum cases from this ratio and count them separately. Weight sources equally and report cell-macro scores if quotas changed. Resolve ties using the earlier checkpoint. Never select checkpoints using test performance.
+Compute and cache validation references before the pilot. Select each seed's checkpoint using the mean validation score `V/U`, where `U` is the stored fractional-knapsack upper bound for that instance. Under the September 29 reference-service revision, `U` is retained even when the optimum `V*` is certified; it is not replaced by `V*`. Exact optimality gaps use the separate certified `value` column. Exclude trivial zero-optimum cases from this ratio and count them separately. Weight sources equally and report cell-macro scores if quotas changed. Resolve ties using the earlier checkpoint. Never select checkpoints using test performance.
 
 Run a 50,000-transition pilot first to check stability and estimate compute time. Fix the final budget before viewing test metrics. If 300,000 transitions is insufficient and time allows, a validation-only decision may raise it to 1,000,000 for **all three seeds**; record the change. Report a failed-to-learn result honestly if the budget is exhausted.
 

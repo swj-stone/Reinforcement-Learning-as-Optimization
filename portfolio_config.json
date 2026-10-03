@@ -1,0 +1,19 @@
+{
+  "version": "portfolio-v2",
+  "objective": "source-balanced mean final value divided by fractional upper bound",
+  "arms": ["greedy_density", "value_first", "light_first", "density_sqrt", "one_e_threshold", "seeded_greedy8", "swap_repair8", "dqn_seed0"],
+  "dqn_checkpoint": "results/dqn-seed0/best.pt",
+  "dqn_checkpoint_sha256": "51bbc162a100a2ae31a1863a20c2cc6e083026a4b63c766d1aa90b385196c73b",
+  "seeds": [0, 1, 2],
+  "epochs": 10,
+  "epsilon_start": 1.0,
+  "epsilon_end": 0.1,
+  "prior_strength": 5.0,
+  "validation_every_epochs": 1,
+  "context_bins": {"n": [30, 75, 150], "capacity_fraction": [0.375, 0.625], "density_cv": [0.5, 1.5], "max_weight_over_capacity": [0.1, 0.5]},
+  "holdout": {"namespace": "portfolio_v2", "main": 2400, "e3_size": 600, "e4_tail": 300},
+  "bootstrap_resamples": 1000,
+  "bootstrap_seed": 8101,
+  "random_trials": 10,
+  "random_seed": 6001
+}

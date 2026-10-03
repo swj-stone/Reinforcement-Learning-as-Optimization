@@ -1,0 +1,35 @@
+{
+  "figures": [
+    "validation_learning_curves.png",
+    "validation_learning_curves.svg",
+    "e1_exact_gap_by_source.png",
+    "e1_exact_gap_by_source.svg",
+    "e2_exact_gap_by_size.png",
+    "e2_exact_gap_by_size.svg",
+    "stress_exact_gap.png",
+    "stress_exact_gap.svg",
+    "quality_vs_runtime.png",
+    "quality_vs_runtime.svg"
+  ],
+  "generator_sha256": "d13d08012dc78158f4c65072349ee9999cdf915e975d3bb245164757797103c1",
+  "inputs_sha256": {
+    "results\\dqn-seed0\\validation.csv": "df6e36452e71a90e791fe4ea77655379596fe2bd4c20cef847dd0bee154bcce5",
+    "results\\dqn-seed1\\validation.csv": "df9da25a6292fd819425cc9a1a7488eb23a05fd2842a3708628dbdf11e2a08d5",
+    "results\\dqn-seed2\\validation.csv": "e2e3c49cee10a058e2f0730aff973ea81c40a3cbedda23e9f581c70c923c5f51",
+    "results\\formal-comparison\\summary.csv": "94698e1ba9936eadbd551c07afc9af22fff9c7bc0798da910482c8dde0da9d12"
+  },
+  "matplotlib_version": "3.10.7",
+  "outputs_sha256": {
+    "assets\\experiment\\e1_exact_gap_by_source.png": "7859bcb3eb384187389dffb40e528634a83f7c8c462c110e6e958aa687ea29cc",
+    "assets\\experiment\\e1_exact_gap_by_source.svg": "b24f2fc93ef0f1152a85b699b5237fce3a36227900b810f1ac023cd38e6bcde6",
+    "assets\\experiment\\e2_exact_gap_by_size.png": "adebe9c54a89687467d3ab81741f15faaea7aa7d3d930e38f458ff5e90570e1e",
+    "assets\\experiment\\e2_exact_gap_by_size.svg": "8443c3c3dfefc3c3e57a2d9b0787d98083f01b7ea5e3fb74b2b9f0e430d84fdb",
+    "assets\\experiment\\quality_vs_runtime.png": "14b7b795c43aa06fe6de84bbfd0185a49809a77339eab87a3c645ba6ad314e18",
+    "assets\\experiment\\quality_vs_runtime.svg": "c5beb0d54b98075cefe45ac898c224e11d12238dcbd11623e2f4c7b191308c54",
+    "assets\\experiment\\stress_exact_gap.png": "826bd2de8029d7494a7e00e93c056db071109c54a357be99a86ace20b56fa3be",
+    "assets\\experiment\\stress_exact_gap.svg": "4c611ee6a93fcc0c626fdb790167f3a5dda0ef43c4fab0a88ff6bba142debdcc",
+    "assets\\experiment\\validation_learning_curves.png": "68a05a1f303ae1d7bf8dfe9af41e469d039b8abd0f312959966044baddf4d83c",
+    "assets\\experiment\\validation_learning_curves.svg": "7a018204fecfe28c30ac58a936f2f28e6d0bf74b474a8e56f21c2e63230c0948"
+  },
+  "schema": "formal-comparison-summary-v1"
+}

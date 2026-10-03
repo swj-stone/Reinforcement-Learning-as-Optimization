@@ -1,0 +1,14 @@
+{
+  "status": "passed",
+  "local_markdown_links_checked": 36,
+  "png_images_verified": 5,
+  "figure_file_checksums_verified": 10,
+  "frozen_inputs_and_training_code_unchanged": true,
+  "compact_evidence_copies_match_originals": true,
+  "tests": {
+    "passed": 473,
+    "failed": 0,
+    "duration_seconds": 179.11
+  },
+  "independent_numeric_audit_sha256": "fbc4a147db5f5243016b505b2e52a9fa8775eb8952fa810a44634da64aa6a18a"
+}

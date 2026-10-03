@@ -1,0 +1,56 @@
+{
+  "description": "Small presentation bundle; no full corpus or retraining required by Run All.",
+  "files": {
+    "collection_audit.json": {
+      "source": "datasets/raw/real/collect_report.json",
+      "source_sha256": "0326b31e4ac0d7367c20dabde9b6e4687d424ecb82df621d5d456b59ba255424",
+      "sha256": "0326b31e4ac0d7367c20dabde9b6e4687d424ecb82df621d5d456b59ba255424",
+      "transformation": "byte-identical copy"
+    },
+    "selector_seed1.json": {
+      "source": "results/portfolio-v2-training/seed1.json",
+      "source_sha256": "a58ece03ca5c5f13b257865b1abf42e6e4715af471364c828c85156f1a2a1d70",
+      "sha256": "a58ece03ca5c5f13b257865b1abf42e6e4715af471364c828c85156f1a2a1d70",
+      "transformation": "byte-identical copy"
+    },
+    "dqn_seed0.pt": {
+      "source": "results/dqn-seed0/best.pt",
+      "source_sha256": "51bbc162a100a2ae31a1863a20c2cc6e083026a4b63c766d1aa90b385196c73b",
+      "sha256": "51bbc162a100a2ae31a1863a20c2cc6e083026a4b63c766d1aa90b385196c73b",
+      "transformation": "byte-identical copy"
+    },
+    "demo_instances.json": {
+      "source": "datasets\\processed\\train\\instances.jsonl",
+      "source_sha256": "3f23b2a1dbbf9f32c0cd96e5fe10091ed15aafbb480f84d45cd6cd92b3dbbc34",
+      "sha256": "bde0efc7579fb02d86d823ab7b1b9b6c992bd9bd8181bad599100eba4ea9f2b9",
+      "selection": "First stored n=20, alpha=.5 instance per synthetic family and first four real instances; no outcome selection",
+      "instance_ids": [
+        "syn-train-uniform-n20-a50-i0000",
+        "syn-train-normal-n20-a50-i0000",
+        "syn-train-correlated-n20-a50-i0000",
+        "syn-train-skewed-n20-a50-i0000",
+        "real-train-n20-a50-i0000",
+        "real-train-n20-a50-i0001",
+        "real-train-n20-a50-i0002",
+        "real-train-n20-a50-i0003"
+      ],
+      "split": "train",
+      "use": "demonstration only, not held-out evidence"
+    },
+    "real_lot_sample.csv": {
+      "source": "datasets\\raw\\real\\lots_clean.csv",
+      "source_sha256": "1e7b2978df4585ea4fa4772ffe4ed2f8f2831e91386fdcedd6ae8ce49f433779",
+      "sha256": "b021528b7ef3f3bbb8652068089375402d00bc09de86656b3075f0f2439b8017",
+      "selection": "First eight cleaned rows, restricted to resource/value/date/source-row fields"
+    },
+    "dqn_validation.json": {
+      "source_hashes": {
+        "results/dqn-seed0/validation.csv": "df6e36452e71a90e791fe4ea77655379596fe2bd4c20cef847dd0bee154bcce5",
+        "results/dqn-seed1/validation.csv": "df9da25a6292fd819425cc9a1a7488eb23a05fd2842a3708628dbdf11e2a08d5",
+        "results/dqn-seed2/validation.csv": "e2e3c49cee10a058e2f0730aff973ea81c40a3cbedda23e9f581c70c923c5f51"
+      },
+      "sha256": "ee15ff3df09887319c13f0a44087e72b51d52beaf1abe81575d4e50c225d8b38",
+      "transformation": "combine recorded validation curves with training-seed labels"
+    }
+  }
+}

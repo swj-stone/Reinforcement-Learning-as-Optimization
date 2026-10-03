@@ -1,0 +1,123 @@
+{
+  "config": {
+    "arms": [
+      "greedy_density",
+      "value_first",
+      "light_first",
+      "density_sqrt",
+      "one_e_threshold",
+      "seeded_greedy8",
+      "swap_repair8",
+      "dqn_seed0"
+    ],
+    "bootstrap_resamples": 1000,
+    "bootstrap_seed": 8101,
+    "context_bins": {
+      "capacity_fraction": [
+        0.375,
+        0.625
+      ],
+      "density_cv": [
+        0.5,
+        1.5
+      ],
+      "max_weight_over_capacity": [
+        0.1,
+        0.5
+      ],
+      "n": [
+        30,
+        75,
+        150
+      ]
+    },
+    "dqn_checkpoint": "results/dqn-seed0/best.pt",
+    "dqn_checkpoint_sha256": "51bbc162a100a2ae31a1863a20c2cc6e083026a4b63c766d1aa90b385196c73b",
+    "epochs": 10,
+    "epsilon_end": 0.1,
+    "epsilon_start": 1.0,
+    "holdout": {
+      "e3_size": 600,
+      "e4_tail": 300,
+      "main": 2400,
+      "namespace": "portfolio_v2"
+    },
+    "objective": "source-balanced mean final value divided by fractional upper bound",
+    "prior_strength": 5.0,
+    "random_seed": 6001,
+    "random_trials": 10,
+    "seeds": [
+      0,
+      1,
+      2
+    ],
+    "validation_every_epochs": 1,
+    "version": "portfolio-v2"
+  },
+  "created_at": "2026-10-03T11:16:52.500971+00:00",
+  "experiment_code": {
+    "__init__.py": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    "baselines/__init__.py": "83c9b2a0b2a1b2da79e4a1f015180b813a5bbf848ca60c168962f12a571a9fcf",
+    "baselines/cli.py": "872873753ccb0f3b71ca72b94cfcc517dbe6a89d099c47053f5db843ba1c6f96",
+    "baselines/methods.py": "5ba37ef5d3d616759e036ccb61609ea26641ce1d5a09269f980e494737cab291",
+    "baselines/seeds.py": "c175adfa546aa84aa309d6740a1db116f45dd9b668bf243bf8bed88251b8902e",
+    "data/__init__.py": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    "data/assemble/__init__.py": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    "data/assemble/cli.py": "62059e56eb9d9f3fc7cf2fa95836fd43f67188499a86c1bfb5a1b446c5fe8793",
+    "data/assemble/lots.py": "5450c679f4ac523a886a7aae195534d6f6fa7ac173965a329fd3b369e2e3952c",
+    "data/assemble/manifest.py": "d7d528ec3831ebefee988547672668cea3527e42717c9c03eb5ec09f0de18ecf",
+    "data/assemble/merge.py": "3023df068b00d0a5989c459f4c0b44704e0d934b778e468465998c69a01bb7fd",
+    "data/assemble/real.py": "35412316bf1693ca44a04d455e6568974c38680f758d13d588c128c6a49c211e",
+    "data/assemble/stress.py": "be5aa4737bc717f9015debfac459026561536612ff1077ae9390de75ca848601",
+    "data/collect/__init__.py": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    "data/collect/clean.py": "7eeb592c2cf4165c371b26e542fd85591d2b3ac9f07ab0b47b37abce8d1d5941",
+    "data/collect/cli.py": "82797913cdaf0328cdb06006057ecdbc1cb169838a0959144ad1ec352f731acb",
+    "data/collect/download.py": "8080f2631b52b75438fe3192a5dd09b28f6a0dbe749e40a481ed00dcf82a2d7d",
+    "data/collect/run.py": "f79f8458a29bb7c4e14cafdc5a317b89e5a4633bf1f6421959ba6f7d05797310",
+    "data/generate/__init__.py": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    "data/generate/cli.py": "af3ecd47f4afee6599e8aafe548bfc6aa82cad369e14b7daaa7efb9459d91646",
+    "data/generate/corpus.py": "fe9792b97a623e08b588fe5db8258797d4a8cfdd0113477fcd8631102c2ca025",
+    "data/generate/families.py": "a7a3599331718446c66617c744e0e561fefb1e7b0bfacc24efa215e05a5c1ec8",
+    "data/generate/hashing.py": "695617fa5dc3b00bff4e572446958efef0c0df355053c50364ce80185a6acafb",
+    "data/generate/seeds.py": "2a9cd29ff93bfc9f3032ea8ca5232128286979641df3283384d22429f9470310",
+    "data/spec.py": "d5c3afdebd9a4c878c8732bb766ac9e155456b4602171bc0920c500fd5e08e93",
+    "eval/__init__.py": "7d47250a5ed849c7f335810418fb183a874d3622bc7e7344b79b1efc4af80a6c",
+    "eval/cli.py": "3b6f44f46fd80812a2f7bf78d48a8a068c83dbc7e51f0c958663961d99137df9",
+    "eval/metrics.py": "a5c1248180b6ec1e9bdb23fb303e0b84ecbb4e63620a9f78465a2fed00601646",
+    "eval/reference.py": "41c3eca9bb68bce737936b437314e993bb3b93324b84875991622a2af4fce4f2",
+    "rl/__init__.py": "e39c1a5cfc7bc0a4bdb4a735f87858c8d784f5705128ee78b8732db0332ee542",
+    "rl/artifacts.py": "9f786406cf82ad7ed958d725800cd8e4f85da03813317f4f583d20e356c52ea4",
+    "rl/cli.py": "2422752223651227a1f050217be8addb6930339529780c9b5b351bc1fa8e78af",
+    "rl/environment.py": "314116e15a98530041daeb2d9d3220356326504c79137ba3c5db37123ae5c503",
+    "rl/model.py": "26f601b84abb83d684ab7dec5a5581792595690fcd2db3bb65f9d1abfdb6126c",
+    "rl/sampling.py": "bfe5b8aa477414248d3f8d2851d32729600f3007f6c6c70ed001b75a0f8bc72a",
+    "rl/training.py": "6d37df4f73bbcc3b9ecba55b97aacd48d8f2a5fed39de0c843f2c8f75f9db540"
+  },
+  "originals": {
+    "EXPERIMENT_REPORT.md": "2591e8fc7eefadf32adb4fc9e49ce4ff93683773ec9ab54f6fa6e0303f1fc82e",
+    "baseline_results.csv": "5d99b3b65c266bc2c9260cffbd27da294cb9496b40019879ff8f20739e2ba9e8",
+    "data_manifest.json": "0cbf77aab5f0336690280fe3ed280b8f699274aad03345f890b242bea1034791",
+    "datasets/processed/stress/e3_size/instances.jsonl": "1d009b290118c9d0def373dbe6940d2aee6881d6a9d0c5fdc4592e10a86d204d",
+    "datasets/processed/stress/e4_tail/instances.jsonl": "72903673e86afb00da46221ea3db76502c8945c5f6ad03964be21db203ca2c8e",
+    "datasets/processed/test/instances.jsonl": "f9941352bccc8f2bc62aa7a04a8f1692bd3b264196d9bf3f35d827200ec5688c",
+    "datasets/processed/train/instances.jsonl": "3f23b2a1dbbf9f32c0cd96e5fe10091ed15aafbb480f84d45cd6cd92b3dbbc34",
+    "datasets/processed/validation/instances.jsonl": "979c95be1bdf79849185f9eefa307ad55ef280eccedbc9ff8b0580bc89f047a5",
+    "docs/superpowers/specs/2026-10-03-portfolio-design.md": "197773c75e3da80b639c992eecc0f66bbd28614ebd46ed7ab4f885ae2351cdf4",
+    "experiment_config.yaml": "b8b1ee269fcb350058d15274c149c53213c4646524bd79444ab0edcd438b6443",
+    "portfolio_config.json": "b67fc92d309a56400a781beb95105dacc966f6523c06460fc5f2eea1e570a3f0",
+    "reference_results.csv": "9c33bdac1f6d782920e6977666c169fd6224480354dfa0650eb5e50f23c64090",
+    "results/dqn-seed0/best.pt": "51bbc162a100a2ae31a1863a20c2cc6e083026a4b63c766d1aa90b385196c73b",
+    "results/dqn-seed0/run.json": "bdf9210ad750b4c4d764729496c11dba7c4c91a10bbd54ccd6e447ac7925b98c",
+    "results/dqn-seed1/best.pt": "5f6b2c98d0a7be1e09382facaed7429b2aba4412fb4e720d87e290947675d4be",
+    "results/dqn-seed1/run.json": "4c3c191335af5fafdfaf0de785135496cecc4aa2483249e94eb68bfabe0b730b",
+    "results/dqn-seed2/best.pt": "d28d7f85a75f59970e513718da8a6007f25250ba7bb04f35bca755b2f518c6d4",
+    "results/dqn-seed2/run.json": "c3f496549ffc90580d3f95a0f31ad3d5da5ff5eb69fec7847e192d0ab3e338ea"
+  },
+  "portfolio_core_code": {
+    "portfolio/bandit.py": "1147915b665f0d2181ee6460069100a8adda33f3db2d0341838aab269a0b2b48",
+    "portfolio/holdout.py": "ff56a6a7f255a4ac70dc828967a12b899108a81d0dac17adde37da2dfda15dbd",
+    "portfolio/run.py": "3e7e793c84ed62decabd729a3b681349e0ddc047419c4e84415aa6e0f0601a0e",
+    "portfolio/strategies.py": "291d4e717c26da27f89007555ddac4bb77cf7839b62300a45816a81509b9e49c"
+  },
+  "rationale": "Prospective follow-up after inspecting original DQN results; same real-business test cohort."
+}

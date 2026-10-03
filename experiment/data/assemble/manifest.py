@@ -133,8 +133,8 @@ _RL_ENVIRONMENT: dict[str, object] = {
             "bound for that instance"
         ),
         "certified_optimum": (
-            "U = V*; trivial zero-optimum cases are excluded from the ratio and "
-            "counted separately"
+            "value stores certified V*; upper_bound retains fractional U "
+            "even when certified; exclude and count zero-optimum cases separately"
         ),
         "never_select_on": "test performance",
         "source_weighting": (

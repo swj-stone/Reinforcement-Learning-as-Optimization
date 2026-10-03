@@ -1,0 +1,16 @@
+{
+  "status": "verified",
+  "rows": 36300,
+  "ignored_columns": [
+    "latency_s"
+  ],
+  "methods": {
+    "greedy": 3300,
+    "random": 33000
+  },
+  "distinct_instances": 3300,
+  "non_timing_differences": 0,
+  "original_sha256": "5d99b3b65c266bc2c9260cffbd27da294cb9496b40019879ff8f20739e2ba9e8",
+  "new_sha256": "b884f96a48ef4a7a6fad496e1e794e374cf311544f9dbf00a6a617bfbe00b51e",
+  "note": "Every selected value, weight, violation count, item-set hash, trial and seed matches."
+}

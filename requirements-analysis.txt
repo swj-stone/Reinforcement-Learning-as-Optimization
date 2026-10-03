@@ -1,0 +1,3 @@
+# Report-only dependency; keep the frozen training configuration unchanged.
+-r requirements.txt
+matplotlib==3.10.7

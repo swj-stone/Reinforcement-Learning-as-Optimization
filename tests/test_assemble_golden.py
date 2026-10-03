@@ -156,19 +156,29 @@ def test_the_two_stress_sets_match_the_frozen_shape(assembled):
 def test_paths_are_posix_and_relative_inside_the_repo(assembled):
     """绝对路径会把本机目录树写进**入库**的凭据里。
 
-    夹具在仓库外，所以端到端只能验证"仓库外保持绝对、且是 POSIX 形式"；
-    仓库内那一支走不到，必须直接量 `_display_path`。
+    pytest 的 --basetemp 可以在仓库内，也可以在仓库外；协议分别要求相对
+    和绝对 POSIX 路径。独立的路径断言确保两种情况始终都有覆盖。
     """
     manifest = assembled["manifest"]
+    root = assembled["root"]
+    base = root.relative_to(spec.REPO_ROOT) if root.is_relative_to(spec.REPO_ROOT) else root
     assert "\\" not in manifest["output_dir"]
-    assert Path(manifest["output_dir"]).is_absolute()
-    for key in ("lots_clean", "collect_report", "generation_manifest"):
+    assert manifest["output_dir"] == (base / "processed").as_posix()
+    expected = {
+        "lots_clean": base / "collect" / "lots_clean.csv",
+        "collect_report": base / "collect" / "collect_report.json",
+        "generation_manifest": base / "generation" / "manifest.json",
+    }
+    for key, expected_path in expected.items():
         path = manifest["provenance"][key]["path"]
         assert "\\" not in path, path
-        assert Path(path).is_absolute(), path
+        assert path == expected_path.as_posix()
 
     inside = spec.REPO_ROOT / "datasets" / "raw" / "collect" / "lots_clean.csv"
     assert MAN._display_path(inside) == "datasets/raw/collect/lots_clean.csv"
+    outside = spec.REPO_ROOT.parent / "outside-repo" / "lots_clean.csv"
+    assert MAN._display_path(outside) == outside.as_posix()
+    assert Path(MAN._display_path(outside)).is_absolute()
     # 绑定 `REPO_ROOT` 本身必须是绝对路径，否则相对化会静默失效。
     assert spec.REPO_ROOT.is_absolute()
     assert MAN._display_path(spec.REPO_ROOT) == "."

@@ -3,11 +3,47 @@
 **Course:** Artificial Intelligence in Operations Research — Seminar  
 **Author:Wenjie SHI**  
 **Supervisor:Chi ZHAO**  
-**Status:** Project proposal; implementation and experiments are planned.
+**Status:** The original three-method experiment and the strategy-portfolio improvement are complete. The follow-up includes eight candidate strategies, an experience-based selector, fresh instance tests, figures and a separate report. Verification: 559 tests passed.
 
-This project will compare **random selection, greedy selection, and reinforcement learning (RL)** on the **0/1 knapsack problem**. It will use two data sources: generated instances with several distributions and sizes, including severely skewed data, and instances constructed from public real business records. Both the training set and the validation set will contain **50% synthetic instances and 50% real-data-derived instances**.
+This project compares **random selection, greedy selection, and reinforcement learning (RL)** on the **0/1 knapsack problem**. It uses two data sources: generated instances with several distributions and sizes, including severely skewed data, and instances constructed from public real business records. Both the training set and the validation set contain **50% synthetic instances and 50% real-data-derived instances**.
 
-The step-by-step protocol, data recipes, run settings, and acceptance checks are in [EXPERIMENT_PLAN.md](EXPERIMENT_PLAN.md). This document explains the motivation and overall approach; experiments have not yet been run.
+Read the completed [experimental report](EXPERIMENT_REPORT.md) for results, interpretation, limitations and reproduction commands. The step-by-step protocol is in [EXPERIMENT_PLAN.md](EXPERIMENT_PLAN.md), implementation details are in [RL_IMPLEMENTATION.md](RL_IMPLEMENTATION.md), and the earlier pilot is documented separately in [RL_PILOT_REPORT.md](RL_PILOT_REPORT.md).
+
+## Strategy Portfolio Improvement
+
+The original DQN is retained as a frozen baseline. A new contextual bandit learns which of eight complete strategies to run, including an adapted **1/e observation rule**, seeded greedy search, exchange repair, and the original DQN. For the value-first objective, the default interface runs all candidates and keeps the highest-value feasible solution.
+
+| Method on the fresh 2,400-instance follow-up | Mean exact gap (lower is better) |
+| --- | ---: |
+| Original greedy | 1.357% |
+| Original DQN, three-seed mean | 9.374% |
+| Best fixed strategy chosen on validation | 0.142% |
+| Learned strategy selector, three-seed mean | 0.159% |
+| Run all eight candidates and keep best | **0.079%** |
+
+The improvement is substantial, but stronger candidate algorithms account for most of it: the learned selector does not beat the validation-best fixed strategy. The full portfolio guarantees the best result within its candidate set, not a globally optimal knapsack solution. New real-derived combinations reuse the original test-period business records; they are not an independent new business sample.
+
+Read [PORTFOLIO_REPORT.md](PORTFOLIO_REPORT.md) for the learning mechanism, stress tests, runtime, attribution, limitations and reproduction commands. Try the value-first interface with the existing environment:
+
+```powershell
+.\venv\Scripts\python.exe -m portfolio.solve --instance portfolio/example.json --mode best
+```
+
+Use `--mode learned` to run one strategy selected from past experience, or `--mode guarded` to add a greedy fallback. The example improves greedy value 160 to portfolio value 220; the report also shows the actual learned choice on this example.
+
+## Original Three-Method Results
+
+The main test contains 2,400 instances, equally divided between synthetic and real-derived data. Lower exact optimality gap is better.
+
+| Method | Mean exact gap | Main-test feasibility |
+| --- | ---: | ---: |
+| Random, averaging 10 trials per instance | 43.089% | 100% |
+| Greedy | 1.159% | 100% |
+| DQN, mean across seeds 0/1/2 | 9.521% | 100% |
+
+DQN's seed gaps are 8.505%, 9.194% and 10.864% (sample SD 1.213 percentage points). It learns better selection than random on the main test but remains less accurate and slower than greedy. At unseen n=500, its mean gap rises to 31.641%, with substantial seed variation. The report retains these negative results; no test-driven tuning was performed. See [all group/seed tables](report_tables/summary.csv) and [paired uncertainty intervals](report_tables/paired_bootstrap.csv).
+
+![Exact optimality gap by data source](assets/experiment/e1_exact_gap_by_source.png)
 
 ## Background
 
@@ -64,19 +100,19 @@ This illustrates the behavior we want the agent to learn: accepting a smaller im
 | Greedy selection | Sort by descending value-to-resource ratio and include each item that fits | A fast deterministic heuristic |
 | Reinforcement learning | Train a DQN agent to choose include or skip based on the current state and future opportunities | A learned strategy trained on the mixed dataset |
 
-There are **three competing methods**. An exact solver is only an evaluation reference, not a fourth competitor or a source of training labels. All methods receive the same items and capacity and must obey the same constraints.
+The original experiment has **three competing methods**; the separately documented portfolio follow-up adds strategy-selection controls. An exact solver is only an evaluation reference, not a competing learned method or a source of training labels. All methods receive the same items and capacity and must obey the same constraints.
 
 ## Two Types of Data
 
 ### Synthetic data
 
-I will generate four families: independent uniform data, approximately normal data, correlated resource/value data, and a severely skewed mixture containing a small fraction of unusually large or valuable items. The exact sampling formulas are specified in the experimental plan.
+The frozen corpus contains four families: independent uniform data, approximately normal data, correlated resource/value data, and a severely skewed mixture containing a small fraction of unusually large or valuable items. The exact sampling formulas are specified in the experimental plan.
 
 The main experiment uses **20, 50, 100, and 200 items** per instance and capacity ratios of **0.25, 0.50, and 0.75**. A separate test uses **500 items** to measure generalization to a larger unseen size. Stronger distribution imbalance is also reserved for a stress test.
 
 ### Public real business data
 
-The initial source will be [UCI Online Retail](https://archive.ics.uci.edu/dataset/352/online+retail), which provides transaction quantities, prices, invoice identifiers, and timestamps. I will treat a positive transaction line as an indivisible fulfillment lot: its quantity is the resource requirement, and quantity multiplied by unit price is its value.
+The core source is [UCI Online Retail](https://archive.ics.uci.edu/dataset/352/online+retail), which provides transaction quantities, prices, invoice identifiers, and timestamps. A positive transaction line is treated as an indivisible fulfillment lot: its quantity is the resource requirement, and quantity multiplied by unit price is its value.
 
 This is a **warehouse allocation proxy built from real transactions**. The capacity is an experimental handling-unit budget; the dataset does not provide measured warehouse capacity or shipment weights, and sales value is not profit.
 
@@ -100,9 +136,9 @@ First, I will acquire and inspect the public data, implement the generators and 
 
 ### Turn selection into a learning environment
 
-The agent will consider every item once in the generated order. All item information is available from the start.
+The agent considers every item once in the generated order. All item information is available from the start.
 
-| RL element | Proposed definition |
+| RL element | Implemented definition |
 | --- | --- |
 | State | All item resource requirements and values, current item index, and remaining capacity |
 | Action | Include or skip the current item |
@@ -122,11 +158,11 @@ During training, the agent uses experience from many such episodes to improve it
 
 ### Train a policy that supports different sizes
 
-I will use a small **Deep Q-Network (DQN)** to estimate the future value of including or skipping an item. The two-action setup makes this a reasonable initial choice. The original [DQN paper by Mnih et al.](https://doi.org/10.1038/nature14236) supplies the algorithmic background; the knapsack environment is this project's proposed application.
+The implemented **Deep Q-Network (DQN)** estimates the future value of including or skipping an item. The two-action setup makes this a reasonable initial choice. The original [DQN paper by Mnih et al.](https://doi.org/10.1038/nature14236) supplies the algorithmic background; the knapsack environment is this project's application.
 
-The network will use a shared item encoder and pooled item information so the same policy can accept different numbers of items. Infeasible include actions will be excluded during exploration, evaluation, and learning-target computation. Training episodes and replay batches will balance the two data sources. The initial configuration uses three training seeds and a budget of 300,000 environment transitions per seed.
+The network uses a shared item encoder and pooled item information so the same policy can accept different numbers of items. Infeasible include actions are excluded during exploration, evaluation, and learning-target computation. Training episodes and replay batches balance the two data sources. Each of three formal seeds completed 300,440 transitions, finishing its last balanced block after the requested 300,000. Checkpoints were selected on validation alone; the pilot is a separate diagnostic run.
 
-The planned tools are Python, NumPy, pandas/openpyxl for data preparation, PyTorch for DQN, OR-Tools for reference solutions, and Matplotlib for plots. Versions will be pinned when implementation starts.
+The implementation uses Python, NumPy, pandas/openpyxl for data preparation, PyTorch for DQN, and integer dynamic programming for exact references. Runtime versions are pinned in `requirements.txt`; report plotting uses `requirements-analysis.txt`. OR-Tools is not required. Use the existing project environment through `.\venv\Scripts\python.exe`; no second environment is needed.
 
 ## Simple Two-Week Plan
 
@@ -137,16 +173,16 @@ The detailed daily checklist is in [EXPERIMENT_PLAN.md](EXPERIMENT_PLAN.md). The
 | 1 | Acquire and audit data; implement generators, splits, baselines, and environment | Frozen dataset manifest, verified 50:50 splits, and working examples |
 | 2 | Train three seeds; select checkpoints on validation; run final and stress tests | Reproducible metrics, comparison plots, and seminar presentation |
 
-## Evaluation and Expected Outcome
+## Evaluation and Interpretation
 
-All three methods will solve the same held-out instances. Evaluation will cover overall performance, each data source, each synthetic distribution, instance size, capacity ratio, and severe-imbalance subsets. The test set will not be used to tune the agent.
+All three methods were evaluated on the same held-out instances. Results cover overall performance, both data sources, synthetic distributions, instance sizes, capacity ratios and severe-imbalance subsets. Test results were not used to tune the agent.
 
-I will report solution quality, capacity violations, runtime per instance, training cost, and variability. When an optimum has been certified, the gap is:
+The report includes solution quality, capacity violations, runtime per instance, training cost and variability. The exact gap is:
 
 `Optimality gap (%) = 100 × (optimal value − obtained value) / optimal value`
 
 In the three-item example, the greedy method has a gap of `100 × (10 − 7) / 10 = 30%`, while the optimal selection has a gap of `0%`.
 
-If the reference solver times out, I will report its bound and a bound-based quality measure rather than label its best feasible result as optimal. Raw values from different units will not be averaged together. Runtime measurements will use the same hardware and include method-specific preprocessing.
+Every reference in this corpus is certified by integer DP. Checkpoint selection uses the separately stored fractional upper bound U, while the exact gap uses the optimum V*. Raw values from different units are not averaged together. Inference timings were measured sequentially on the same hardware after training and include method-specific preprocessing.
 
-The expected deliverable is a reproducible comparison showing when each method works well, how scale and imbalance affect it, and whether learning from the mixed dataset is useful. Improvement over greedy selection remains a research question. An optional ablation will compare mixed-data RL training with synthetic-only and real-only training.
+The completed study supports greedy for this task and budget, while demonstrating useful learned selection and a clear limitation at unseen sizes. The required mixed-data training was verified; proving that mixing helps would require the optional E5 ablation, which was not run. Additional real domains and seminar slides remain optional follow-up work. Local checkpoints, raw metrics and datasets are retained under Git-ignored `results/` and `datasets/`; compact evidence and figures are included in `report_tables/` and `assets/experiment/`.
