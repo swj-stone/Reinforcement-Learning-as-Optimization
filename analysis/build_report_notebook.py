@@ -90,6 +90,10 @@ def prepare_bundle():
     path = BUNDLE / "dqn_validation.json"
     path.write_text(json.dumps(curves, indent=2) + "\n", encoding="utf-8")
     provenance[path.name] = {"source_hashes": curve_hashes, "sha256": digest(path), "transformation": "combine recorded validation curves with training-seed labels"}
+    for path in sorted([*BUNDLE.glob('visual_*'), *BUNDLE.glob('method_*')]):
+        if path.is_file():
+            provenance[path.name] = {"sha256": digest(path),
+                "transformation": "Derived presentation asset; see visual_provenance.json or method_animation.json for source hashes, aggregation and trace checks"}
     (BUNDLE / "manifest.json").write_text(json.dumps({"description": "Small presentation bundle; no full corpus or retraining required by Run All.",
         "files": provenance}, indent=2) + "\n", encoding="utf-8")
 
@@ -148,7 +152,8 @@ def write_cells():
     |:--|:--|--:|
     | [Motivation and model](#problem) | What decision are we optimizing? | 3 min |
     | [Data preparation](#data) | Where do the instances come from, and is the comparison fair? | 3 min |
-    | [DQN and strategy selection](#methods) | What exactly is learned? | 5 min |
+    | [DQN and strategy selection](#methods) | What exactly is learned? | 3 min |
+    | [Animated method comparison](#method-animation) | How do the four methods make different choices? | 2 min |
     | [Main results](#results) | Does it improve the original baselines? | 4 min |
     | [Live demonstration](#live) | Can we inspect an actual decision? | 2 min |
     | [Conclusions and limitations](#conclusion) | What can we claim? | 2 min |
@@ -162,8 +167,21 @@ def write_cells():
     4. A small, hashed bundle in `assets/notebook/` supplies demonstration data and saved models.
        Full Git-ignored data and runs are needed for full experiment reproduction or rebuilding
        the small bundle with the authoring utility, not for the delivered notebook's Run All.
-    5. `report.html` is a static companion for presentation. It includes figures and saved outputs;
-       the notebook remains the executable version.
+    5. `report.html` is a presentation companion with saved outputs and an offline animation player.
+       The notebook remains the executable version. If a notebook viewer blocks the embedded player,
+       use the standalone player or the GIF fallback linked in the animation section.
+
+    **A visual storyline, not a gallery of averages**
+
+    | Visual | Read it to answer | Point to discuss aloud |
+    |:--|:--|:--|
+    | Cleaning flow and chronological split timeline | What enters the experiment? | Dates, transaction rows and complete instances are different units. |
+    | Distribution scatterplots | What makes instances different? | Weight–value relationships, clusters and outliers differ across the four families. |
+    | Four-lane animation | Where does each decision come from? | A coin flip, a ratio, a neural action value, or a learned choice of solver. |
+    | Gap distribution and threshold counts | Is the improvement widespread? | A mean can hide the fraction of exact solutions and the difficult tail. |
+    | Condition maps and stress matrix | Where are errors concentrated? | Size, capacity pressure and distribution shift must be inspected separately. |
+    | Learned policy atlas | Does the same strategy apply everywhere? | Show observed contexts, action changes and uncovered regions. |
+    | Runtime interval dashboard | What is the cost of a better solution? | Compare typical time, the 95th percentile and the quality obtained. |
 
     The notebook uses English throughout. Author and supervisor names follow the existing project documents.
     """)
@@ -348,18 +366,20 @@ def write_cells():
     display(dropped[dropped > 0].rename_axis('First failing rule').to_frame())
     assert audit['raw_rows'] == audit['kept_rows'] + dropped.sum()
     print(f"Raw: {audit['raw_rows']:,}; retained: {audit['kept_rows']:,}; removed: {dropped.sum():,}")
-    fig, ax = plt.subplots(figsize=(9, 3.2))
-    bars = ax.barh(['Retained', 'Removed'], [audit['kept_rows'], dropped.sum()],
-                  color=['#168c82', '#df8845'])
-    ax.bar_label(bars, labels=[f'{audit["kept_rows"]:,}', f'{dropped.sum():,}'], padding=5)
-    ax.set(xlabel='Transaction rows', title='Audited cleaning outcome', xlim=(0, 590000))
-    fig.tight_layout(); plt.show()
+    from analysis.notebook_data_visuals import figure_cleaning_stream
+    figure_cleaning_stream(audit)
+    plt.show()
     """)
     md("""
     **Observed audit:** 541,909 raw rows become 522,504 valid lots. The 19,405 removals comprise
     9,288 cancellations, 2,517 nonpositive quantity/price rows, 2,379 invalid stock-code rows and
     5,221 exact duplicates. Zero rows fail the other checks in this frozen run; the checks still
     exist in the pipeline.
+
+    **Read the flow in two scales:** the full stream shows the proportion of original rows
+    retained, while the magnified rejected branch explains the composition of removals.
+    The magnification makes small categories readable; it must not be mistaken for a larger
+    share of the full source dataset. Removal reasons are exclusive, not overlapping flags.
 
     The following small sample comes from the first eight cleaned rows, not from an outcome-selected
     subset. Decimal arithmetic avoids binary floating-point rounding surprises when converting
@@ -408,12 +428,9 @@ def write_cells():
     split_counts = pd.DataFrame(manifest['counts']).T[['synthetic', 'real', 'total']]
     display(split_counts)
     assert (split_counts.synthetic == split_counts.real).all()
-    ax = split_counts[['synthetic', 'real']].plot.bar(
-        stacked=True, color=['#214c70', '#168c82'], figsize=(8.5, 3.5), rot=0)
-    ax.set(xlabel='Partition', ylabel='Complete optimization instances',
-           title='Original core corpus: equal representation of both sources')
-    ax.legend(['Synthetic', 'Real-derived'], frameon=False)
-    plt.tight_layout(); plt.show()
+    from analysis.notebook_data_visuals import figure_split_and_mixture
+    figure_split_and_mixture(manifest)
+    plt.show()
     """)
     md(r"""
     ## 5. Synthetic distributions and stress design
@@ -439,8 +456,16 @@ def write_cells():
     family, size, capacity ratio, index, resampling attempt and stream. Numeric labels such as
     1001/2001/3001 are documentary identifiers, not the actual input to that hash function.
 
-    The next figure generates small **illustrative samples**, not additional test evidence.
-    The logarithmic value axis makes the skewed family's large values visible.
+    The next figure generates **illustrative samples**, not additional test evidence.
+    Each point represents one item: its horizontal position is weight and its vertical
+    position is value. There are 200 items per family, generated with seed 42.
+    The logarithmic value axis keeps the skewed family's large outliers visible.
+    Read the tick values: each panel has its own axis limits.
+
+    **What to point out:** uniform draws form a broad cloud; normal draws concentrate around
+    typical items; correlated draws show a clear weight–value relationship; skewed draws
+    contain a dense low-weight cluster and isolated large or high-value items. These pictures
+    explain the data geometry, not which optimization method must win.
     """)
     code("""
     from experiment.data.generate.families import generate_items
@@ -725,7 +750,52 @@ def write_cells():
     print('Source/family columns are shown for explanation; context_key does not use them.')
     """)
     md("""
-    ### 9.5 A small learning experiment you can run live
+    <a id="method-animation"></a>
+    ### 9.5 Watch four methods solve the same small instance
+
+    **Use the player:** press Play for the complete story, or pause and use Next to discuss
+    one decision at a time. Each method has its own lane. The capacity strip encodes actual
+    resource use; selected item labels and the running value show what each decision changes.
+    Scan steps are logical stages, not a comparison of algorithm running times.
+
+    The six items A–F have weights **[6, 5, 5, 3, 2, 1]**, values **[13, 10, 10, 4, 2, 1]**,
+    and capacity **10**. The first three methods make item-level decisions. The strategy
+    selector first predicts **exchange repair**, then delegates solution construction to that
+    algorithm. Its solver stage is condensed; the selector itself does not learn a new
+    accept/skip decision for every item in the animation.
+
+    | Lane | Where does the decision come from? | Observed value in this example |
+    |:--|:--|--:|
+    | Random, seed 0 | A seeded coin flip when the current item fits | 15 |
+    | Density greedy | Descending value/weight; lower weight breaks ties | 18 |
+    | Frozen DQN, seed 0 | Learned feasible include/skip action values | 17 |
+    | Learned selector, seed 1 | Context → predicted solver → that solver's output | 20 |
+
+    **Pause-and-explain prompts:** Why does accepting A prevent B+C? Why can the DQN skip
+    an item that still fits? Which decision was learned by the selector, and which operations
+    belong to its chosen heuristic? Notice that greedy scans A,B,C,D,F,E because E and F
+    have equal density and the lower-weight item comes first; the other item-level lanes
+    use stored order A–F.
+
+    This is a **deliberately constructed teaching example**, verified against the actual
+    implementations and saved checkpoints. Its n=6 is below the formal training sizes 20–200.
+    It illustrates mechanisms and one successful repair; it does not establish performance,
+    robustness or a universal RL advantage. Section 14.1 retains an example where the same
+    saved selector makes a worse choice. Formal claims come from the held-out tables.
+
+    [Open the standalone offline player](assets/notebook/method_animation.html) ·
+    [GIF version](assets/notebook/method_animation.gif) ·
+    [Trace and checkpoint provenance](assets/notebook/method_animation.json).
+    No internet or retraining is needed. If your notebook viewer blocks the embedded player,
+    open the standalone HTML in a browser or expand the GIF/static fallback below.
+    """, tags=("presentation", "live-demo"))
+    code("""
+    from IPython.display import HTML
+    from analysis.notebook_animation import animation_html
+    display(HTML(animation_html(BUNDLE, height=940)))
+    """, tags=("presentation", "live-demo"))
+    md("""
+    ### 9.6 A small learning experiment you can run live
 
     This separate **teaching simulation** has two known types of tiny knapsack instance and
     only two actions: `value_first` and `light_first`. In type A, light-first finds the better
@@ -873,12 +943,25 @@ def write_cells():
     result_table.columns = ['Exact gap (%)', 'Feasible fraction', 'Median time (ms)', 'p95 time (ms)']
     display(result_table)
     assert np.isclose(primary.loc['selector_mean', 'exact_gap_pct_mean'], .1590053984006689)
-    from analysis.notebook_visuals import main_results_figure
-    main_results_figure(summary)
+    from analysis.notebook_results_visuals import gap_distribution_figure
+    gap_distribution_figure(ROOT)
     plt.show()
     """, tags=("presentation",))
     md("""
     ### 11.1 Interpreting the improvement
+
+    **How to read the distribution:** at a chosen gap threshold on the horizontal axis,
+    the curve height is the percentage of instances whose error is no larger than that threshold.
+    Higher and further left is better. Each curve summarizes all 2,400 instances, after averaging
+    random trials or fitted model seeds within each instance. It is not a curve over four averages.
+    The threshold counts make the exact-solution frequency and remaining tail concrete; averaging
+    model seeds describes an experiment and does not construct a best-of-seeds deployment policy.
+
+    **A concrete talking point:** the selector's average gap is at most 1% on **2,315 of 2,400
+    instances (96.46%)**, compared with **1,919 (79.96%)** for greedy. The gap exceeds 5% on
+    **7** selector instances versus **122** greedy instances. There are still difficult cases:
+    a good mean is not a per-instance guarantee. An exactly zero averaged gap means all three
+    fitted selectors reached the optimum on that instance, not that we picked the best seed.
 
     The main selector gap is **0.159%**, versus **1.357% for greedy**, **9.374% for frozen DQN**,
     and **42.989% for random**. Every recorded solution is feasible.
@@ -939,8 +1022,8 @@ def write_cells():
     stress_table = overall[overall.method.isin(primary_methods)].pivot(
         index='method', columns='split', values='exact_gap_pct_mean')
     display(stress_table.loc[primary_methods, ['main', 'e3_size', 'e4_tail']])
-    from analysis.notebook_visuals import stress_results_figure
-    stress_results_figure(summary)
+    from analysis.notebook_results_visuals import stress_benchmark_figure
+    stress_benchmark_figure(summary)
     plt.show()
     """)
     md("""
@@ -965,6 +1048,9 @@ def write_cells():
         display(Markdown(f'**Main-test breakdown: {dimension}**'))
         display(group.pivot(index='group_value', columns='method', values='exact_gap_pct_mean')
                      .reindex(columns=group_methods))
+    from analysis.notebook_results_visuals import condition_map_figure
+    condition_map_figure(ROOT)
+    plt.show()
     """)
     md("""
     ### 12.1 Which actions does the learner actually choose?
@@ -978,17 +1064,30 @@ def write_cells():
     This shows that the learner distinguishes useful and unhelpful candidates on the present
     distribution. It also shows that the current benchmark is dominated by one strong action:
     the selector is not switching evenly among eight equally valuable strategies.
+
+    **Read the condition maps before the policy atlas.** The condition maps describe measured
+    test errors and paired improvements within source/size/capacity groups. The atlas below
+    answers a different question: which action does the saved seed-1 policy predict for each
+    possible input context? Each large tile fixes size and capacity pressure; within it, rows
+    increase density variation and columns increase the largest item's share of capacity.
+    Gray cells were not observed during training; the implementation falls back to global
+    action means there, but that fallback is hidden in the figure to expose the coverage gap.
+    A colored cell does not mean that action is proven optimal for every instance in that bin.
+
+    **A concrete talking point:** the selector reduces mean gap in all **24** source × capacity
+    × size cells, each containing 100 matched instances. The largest reduction is in the
+    synthetic n=20, alpha=0.75 cell; the largest remaining selector gap is in real-derived
+    n=20, alpha=0.50. These are descriptive observations across the complete grid, not subgroups
+    chosen for tuning. Positive mean improvement in a cell does not imply winning every instance.
     """)
     code("""
     choices = pd.read_csv(ROOT / 'portfolio_report_tables/chosen_arms.csv')
     selected = choices[(choices.split == 'main') & choices.method.str.startswith('selector_seed')]
     shares = selected.pivot(index='method', columns='chosen_arm', values='share').fillna(0) * 100
     display(shares)
-    ax = shares.plot.barh(stacked=True, figsize=(10, 3.4), colormap='Set2')
-    ax.set(xlabel='Fraction of main-test instances (%)', ylabel='', xlim=(0, 100),
-           title='Measured actions of the frozen strategy selectors')
-    ax.legend(title='Chosen strategy', bbox_to_anchor=(1.02, 1), loc='upper left', frameon=False)
-    plt.tight_layout(); plt.show()
+    from analysis.notebook_policy_visuals import policy_atlas_figure
+    policy_atlas_figure(load_json(BUNDLE / 'selector_seed1.json'))
+    plt.show()
     """)
     md("""
     ## 13. Supplementary comparisons: understanding where the gains come from
@@ -1043,18 +1142,9 @@ def write_cells():
     exact DP is also practical; a deployment requiring guaranteed optimality can use it.
     """)
     code("""
-    timed = ['greedy_density', 'dqn_mean', 'selector_mean', 'fixed_best', 'portfolio_best']
-    fig, ax = plt.subplots(figsize=(8.5, 4.2))
-    for method in timed:
-        row = primary.loc[method]
-        ax.scatter(row.latency_median_s * 1000, row.exact_gap_pct_mean, s=85)
-        ax.annotate(method.replace('_', ' '),
-                    (row.latency_median_s * 1000, row.exact_gap_pct_mean),
-                    xytext=(6, 7 if method != 'fixed_best' else -18), textcoords='offset points', fontsize=9)
-    ax.set(xscale='log', yscale='log', xlabel='Median solver time (ms, log scale)',
-           ylabel='Mean exact gap (%, log scale)', title='Quality and construction time: lower and left is better',
-           xlim=(.03, 25), ylim=(.04, 20))
-    ax.grid(alpha=.18, which='both'); fig.tight_layout(); plt.show()
+    from analysis.notebook_results_visuals import runtime_quality_figure
+    runtime_quality_figure(summary)
+    plt.show()
     """)
     md("""
     <a id="live"></a>
@@ -1227,8 +1317,11 @@ def write_cells():
     | `report_tables/` | Original published experiment tables |
     | `portfolio_report_tables/` | Follow-up tables, uncertainty and audit |
     | `assets/notebook/` | Small copied/sampled artifacts with provenance for live demonstrations |
-    | `analysis/notebook_visuals.py` | Readable figure helpers used by this notebook |
-    | `report.ipynb` / `report.html` | Executable report / static presentation companion |
+    | `analysis/notebook_*visuals.py` | Data flows, distribution curves, condition maps and policy atlas |
+    | `analysis/notebook_animation.py` | Actual-solver traces and offline teaching animation |
+    | `assets/notebook/visual_provenance.json` | Hashes and aggregation checks for compact derived visualization data |
+    | `assets/notebook/method_animation.html` | Standalone offline player with step and playback controls |
+    | `report.ipynb` / `report.html` | Executable report / saved presentation with animation |
 
     Large datasets and run directories are Git-ignored. Keep them when reproducing full experiments.
     The delivered notebook's default cells use only the code, published tables and compact bundle,
@@ -1257,7 +1350,8 @@ def write_cells():
 
     Open `report.ipynb` in a notebook-capable editor and select `venv/Scripts/python.exe`.
     The installed kernel tools support this selection; a separate JupyterLab installation is
-    optional. In a browser, open `report.html` to read saved text, tables and figures.
+    optional. In a browser, open `report.html` to read saved text, tables and figures and use
+    the embedded animation controls. The player and GIF are self-contained and work offline.
     HTML equation typesetting may use a MathJax CDN; formulas remain readable as text if offline.
 
     The authoring utilities below regenerate the report from its source. They are not required
@@ -1268,6 +1362,14 @@ def write_cells():
     .\venv\Scripts\python.exe -m analysis.build_report_notebook
     .\venv\Scripts\python.exe -m analysis.execute_report_notebook
     ```
+
+    The animation can be regenerated independently with
+    `python -m analysis.notebook_animation` in the same environment. Its manifest records
+    the checkpoint hashes, solver traces and final values. The compact visualization tables
+    are derivatives of the frozen result files; rebuilding them requires the full saved
+    evaluation (`python -m analysis.notebook_results_visuals --build-data` in the same venv),
+    while reading the delivered figures requires only the compact bundle. After regenerating
+    any assets, rebuild and execute the notebook to refresh its bundle hashes and saved outputs.
 
     ### 17.2 Optional full experiment reproduction — do not run during a short presentation
 

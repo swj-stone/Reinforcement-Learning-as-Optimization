@@ -9,6 +9,14 @@ This project compares **random selection, greedy selection, and reinforcement le
 
 Read the completed [experimental report](EXPERIMENT_REPORT.md) for results, interpretation, limitations and reproduction commands. The step-by-step protocol is in [EXPERIMENT_PLAN.md](EXPERIMENT_PLAN.md), implementation details are in [RL_IMPLEMENTATION.md](RL_IMPLEMENTATION.md), and the earlier pilot is documented separately in [RL_PILOT_REPORT.md](RL_PILOT_REPORT.md).
 
+## Classroom Report and Demonstration
+
+Open [report.ipynb](report.ipynb) for the complete English project narrative: motivation, mathematical model, data acquisition and preprocessing, random/greedy/DQN baselines, learned strategy selection, experimental design, measured results, limitations and presentation Q&A. It contains 14 embedded figures, 31 runnable code cells, an interactive animation and a suggested 15–20 minute presentation route. Saved outputs are included; [report.html](report.html) is the presentation companion with offline playback controls.
+
+The visual storyline uses a cleaning flow with a magnified removal mosaic, a chronological split timeline, distribution scatterplots, full-instance gap distributions, condition/stress heatmaps, a learned-policy atlas and a runtime interval dashboard. Each visual has an explanation and a specific discussion point. The [animated method walkthrough](assets/notebook/method_animation.html) contrasts four actual solvers on six items with Play/Pause, stepping and speed controls. A [GIF](assets/notebook/method_animation.gif) and [static comparison](assets/notebook/method_storyboard.png) are available when embedded players are unsupported. This crafted teaching example is explicitly separate from test evidence.
+
+Select the existing `venv/Scripts/python.exe` kernel and run cells in order. Default execution uses the compact, hashed artifacts in `assets/notebook/` and published result tables; it does not download data or rerun full training. Notebook dependencies are recorded in `requirements-notebook.txt`. The report distinguishes the learned selector's results from the supplementary fixed-strategy and full-portfolio comparisons.
+
 ## Strategy Portfolio Improvement
 
 The original DQN is retained as a frozen baseline. A new contextual bandit learns which of eight complete strategies to run, including an adapted **1/e observation rule**, seeded greedy search, exchange repair, and the original DQN. For the value-first objective, the default interface runs all candidates and keeps the highest-value feasible solution.

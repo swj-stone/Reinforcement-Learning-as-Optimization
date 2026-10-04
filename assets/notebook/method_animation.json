@@ -1,0 +1,441 @@
+{
+  "schema_version": 1,
+  "instance": {
+    "instance_id": "crafted-six-item-teaching-example",
+    "weights": [
+      6,
+      5,
+      5,
+      3,
+      2,
+      1
+    ],
+    "values": [
+      13,
+      10,
+      10,
+      4,
+      2,
+      1
+    ],
+    "capacity": 10,
+    "item_order": [
+      0,
+      1,
+      2,
+      3,
+      4,
+      5
+    ],
+    "n": 6
+  },
+  "random_seed": 0,
+  "dqn_seed": 0,
+  "selector_seed": 1,
+  "status": "illustration_only_not_test_evidence",
+  "caveats": [
+    "Deliberately crafted teaching counterexample, not representative performance evidence.",
+    "Six items is below the models' training sizes of 20, 50, 100, and 200.",
+    "The animation's duration is unrelated to solver runtime.",
+    "Selector chooses one strategy; the illustrated repair stages are algorithmic, not RL item actions.",
+    "Only one winning repair candidate is visualized; the solver evaluates other candidates too."
+  ],
+  "checkpoints": {
+    "dqn_seed0.pt": "51bbc162a100a2ae31a1863a20c2cc6e083026a4b63c766d1aa90b385196c73b",
+    "selector_seed1.json": "a58ece03ca5c5f13b257865b1abf42e6e4715af471364c828c85156f1a2a1d70"
+  },
+  "source_sha256": {
+    "experiment/baselines/methods.py": "5ba37ef5d3d616759e036ccb61609ea26641ce1d5a09269f980e494737cab291",
+    "experiment/rl/model.py": "26f601b84abb83d684ab7dec5a5581792595690fcd2db3bb65f9d1abfdb6126c",
+    "experiment/rl/environment.py": "314116e15a98530041daeb2d9d3220356326504c79137ba3c5db37123ae5c503",
+    "portfolio/bandit.py": "1147915b665f0d2181ee6460069100a8adda33f3db2d0341838aab269a0b2b48",
+    "portfolio/strategies.py": "291d4e717c26da27f89007555ddac4bb77cf7839b62300a45816a81509b9e49c"
+  },
+  "selector": {
+    "context_key": [
+      0,
+      1,
+      0,
+      2
+    ],
+    "chosen_arm": "swap_repair8",
+    "estimated_rewards": {
+      "greedy_density": 0.9613592383735068,
+      "value_first": 0.8280100690318144,
+      "light_first": 0.8061582850187912,
+      "density_sqrt": 0.8843810035773527,
+      "one_e_threshold": 0.06545266283232974,
+      "seeded_greedy8": 0.9565261175123935,
+      "swap_repair8": 0.9698794369778757,
+      "dqn_seed0": 0.8978582468458626
+    }
+  },
+  "solutions": {
+    "random": {
+      "selected_indices": [
+        2,
+        3,
+        5
+      ],
+      "value": 15,
+      "weight_used": 9
+    },
+    "greedy": {
+      "selected_indices": [
+        0,
+        3,
+        5
+      ],
+      "value": 18,
+      "weight_used": 10
+    },
+    "dqn": {
+      "selected_indices": [
+        0,
+        3
+      ],
+      "value": 17,
+      "weight_used": 9
+    },
+    "selector": {
+      "selected_indices": [
+        1,
+        2
+      ],
+      "value": 20,
+      "weight_used": 10
+    }
+  },
+  "traces": {
+    "random": [
+      {
+        "item": 0,
+        "take": false,
+        "reason": "coin: skip",
+        "feasible": true,
+        "coin": 0.8444218515250481,
+        "selected_before": [],
+        "selected": [],
+        "remaining_capacity": 10,
+        "value": 0
+      },
+      {
+        "item": 1,
+        "take": false,
+        "reason": "coin: skip",
+        "feasible": true,
+        "coin": 0.7579544029403025,
+        "selected_before": [],
+        "selected": [],
+        "remaining_capacity": 10,
+        "value": 0
+      },
+      {
+        "item": 2,
+        "take": true,
+        "reason": "coin: take",
+        "feasible": true,
+        "coin": 0.420571580830845,
+        "selected_before": [],
+        "selected": [
+          2
+        ],
+        "remaining_capacity": 5,
+        "value": 10
+      },
+      {
+        "item": 3,
+        "take": true,
+        "reason": "coin: take",
+        "feasible": true,
+        "coin": 0.25891675029296335,
+        "selected_before": [
+          2
+        ],
+        "selected": [
+          2,
+          3
+        ],
+        "remaining_capacity": 2,
+        "value": 14
+      },
+      {
+        "item": 4,
+        "take": false,
+        "reason": "coin: skip",
+        "feasible": true,
+        "coin": 0.5112747213686085,
+        "selected_before": [
+          2,
+          3
+        ],
+        "selected": [
+          2,
+          3
+        ],
+        "remaining_capacity": 2,
+        "value": 14
+      },
+      {
+        "item": 5,
+        "take": true,
+        "reason": "coin: take",
+        "feasible": true,
+        "coin": 0.4049341374504143,
+        "selected_before": [
+          2,
+          3
+        ],
+        "selected": [
+          2,
+          3,
+          5
+        ],
+        "remaining_capacity": 1,
+        "value": 15
+      }
+    ],
+    "greedy": [
+      {
+        "item": 0,
+        "take": true,
+        "reason": "fits: take",
+        "feasible": true,
+        "coin": null,
+        "selected_before": [],
+        "selected": [
+          0
+        ],
+        "remaining_capacity": 4,
+        "value": 13
+      },
+      {
+        "item": 1,
+        "take": false,
+        "reason": "does not fit",
+        "feasible": false,
+        "coin": null,
+        "selected_before": [
+          0
+        ],
+        "selected": [
+          0
+        ],
+        "remaining_capacity": 4,
+        "value": 13
+      },
+      {
+        "item": 2,
+        "take": false,
+        "reason": "does not fit",
+        "feasible": false,
+        "coin": null,
+        "selected_before": [
+          0
+        ],
+        "selected": [
+          0
+        ],
+        "remaining_capacity": 4,
+        "value": 13
+      },
+      {
+        "item": 3,
+        "take": true,
+        "reason": "fits: take",
+        "feasible": true,
+        "coin": null,
+        "selected_before": [
+          0
+        ],
+        "selected": [
+          0,
+          3
+        ],
+        "remaining_capacity": 1,
+        "value": 17
+      },
+      {
+        "item": 5,
+        "take": true,
+        "reason": "fits: take",
+        "feasible": true,
+        "coin": null,
+        "selected_before": [
+          0,
+          3
+        ],
+        "selected": [
+          0,
+          3,
+          5
+        ],
+        "remaining_capacity": 0,
+        "value": 18
+      },
+      {
+        "item": 4,
+        "take": false,
+        "reason": "does not fit",
+        "feasible": false,
+        "coin": null,
+        "selected_before": [
+          0,
+          3,
+          5
+        ],
+        "selected": [
+          0,
+          3,
+          5
+        ],
+        "remaining_capacity": 0,
+        "value": 18
+      }
+    ],
+    "dqn": [
+      {
+        "item": 0,
+        "take": true,
+        "reason": "policy: take",
+        "feasible": true,
+        "coin": null,
+        "selected_before": [],
+        "selected": [
+          0
+        ],
+        "remaining_capacity": 4,
+        "value": 13
+      },
+      {
+        "item": 1,
+        "take": false,
+        "reason": "masked: does not fit",
+        "feasible": false,
+        "coin": null,
+        "selected_before": [
+          0
+        ],
+        "selected": [
+          0
+        ],
+        "remaining_capacity": 4,
+        "value": 13
+      },
+      {
+        "item": 2,
+        "take": false,
+        "reason": "masked: does not fit",
+        "feasible": false,
+        "coin": null,
+        "selected_before": [
+          0
+        ],
+        "selected": [
+          0
+        ],
+        "remaining_capacity": 4,
+        "value": 13
+      },
+      {
+        "item": 3,
+        "take": true,
+        "reason": "policy: take",
+        "feasible": true,
+        "coin": null,
+        "selected_before": [
+          0
+        ],
+        "selected": [
+          0,
+          3
+        ],
+        "remaining_capacity": 1,
+        "value": 17
+      },
+      {
+        "item": 4,
+        "take": false,
+        "reason": "masked: does not fit",
+        "feasible": false,
+        "coin": null,
+        "selected_before": [
+          0,
+          3
+        ],
+        "selected": [
+          0,
+          3
+        ],
+        "remaining_capacity": 1,
+        "value": 17
+      },
+      {
+        "item": 5,
+        "take": false,
+        "reason": "policy: skip",
+        "feasible": true,
+        "coin": null,
+        "selected_before": [
+          0,
+          3
+        ],
+        "selected": [
+          0,
+          3
+        ],
+        "remaining_capacity": 1,
+        "value": 17
+      }
+    ]
+  },
+  "exact_optimum": 20,
+  "repair": {
+    "base": [
+      0,
+      3,
+      5
+    ],
+    "candidate": 1,
+    "removed": [
+      5,
+      3,
+      0
+    ],
+    "after_removals": [],
+    "refill": [
+      2
+    ],
+    "final": [
+      1,
+      2
+    ],
+    "all_candidate_items": [
+      1,
+      2,
+      4
+    ],
+    "caption": "One winning repair trial; other alternatives omitted."
+  },
+  "animation": {
+    "width": 1400,
+    "height": 980,
+    "gif_frames": 38,
+    "duration_ms": 18400,
+    "player_keyframes": 12
+  },
+  "outputs": {
+    "method_animation.gif": {
+      "bytes": 1650101,
+      "sha256": "c7ed893beaef9c8022bad942dcd90273235f664f7a0905897556424536aa0218"
+    },
+    "method_animation.html": {
+      "bytes": 1052136,
+      "sha256": "75199ec5afaafe9653f160205948757d25de2985a8f59f8efe2fb10601391081"
+    },
+    "method_storyboard.png": {
+      "bytes": 139546,
+      "sha256": "6c2a41111dfb41f30634b37f02463e536b272955d17d3cefc28180bc861e5fa6"
+    }
+  }
+}

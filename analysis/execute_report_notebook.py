@@ -22,7 +22,7 @@ def main():
     path = ROOT / "report.ipynb"
     notebook = nbformat.read(path, as_version=4)
     nbformat.validate(notebook)
-    runtime = ROOT / "results/notebook-verification"
+    runtime = ROOT / "results/notebook-v2-verification"
     kernel_root = runtime / "kernels"
     kernel = kernel_root / "project-venv"
     kernel.mkdir(parents=True, exist_ok=True)
@@ -43,9 +43,14 @@ def main():
     nbformat.write(notebook, path)
     figures = []
     error_count = 0
+    interactive_players = 0
+    gif_fallbacks = 0
     for i, cell in enumerate(notebook.cells):
         for j, output in enumerate(cell.get("outputs", [])):
             error_count += output.output_type == "error"
+            html_output = output.get('data', {}).get('text/html', '')
+            interactive_players += '<iframe title="Interactive knapsack method walkthrough"' in html_output
+            gif_fallbacks += 'data:image/gif;base64,' in html_output
             if "image/png" in output.get("data", {}):
                 figure = runtime / f"cell-{i:03d}-output-{j:02d}.png"
                 figure.write_bytes(base64.b64decode(output.data["image/png"]))
@@ -68,11 +73,12 @@ def main():
     facts = dict(status="passed", python=sys.executable, seconds=time.perf_counter()-started,
                  cells=len(notebook.cells), code_cells=sum(c.cell_type == "code" for c in notebook.cells),
                  markdown_cells=sum(c.cell_type == "markdown" for c in notebook.cells),
-                 errors=error_count, figures=figures,
+                 errors=error_count, figures=figures, interactive_players=interactive_players,
+                 embedded_gif_fallbacks=gif_fallbacks,
                  sha256={name: hashlib.sha256((ROOT / name).read_bytes()).hexdigest() for name in ["report.ipynb", "report.html"]})
     (runtime / "execution.json").write_text(json.dumps(facts, indent=2) + "\n", encoding="utf-8")
     print(json.dumps({k:v for k,v in facts.items() if k not in ["figures", "sha256"]}, indent=2))
-    print(f"Saved report.ipynb and report.html with {len(figures)} embedded figures.")
+    print(f"Saved report.ipynb and report.html with {len(figures)} embedded figures and {interactive_players} animation player.")
 
 
 if __name__ == "__main__":

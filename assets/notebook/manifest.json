@@ -51,6 +51,34 @@
       },
       "sha256": "ee15ff3df09887319c13f0a44087e72b51d52beaf1abe81575d4e50c225d8b38",
       "transformation": "combine recorded validation curves with training-seed labels"
+    },
+    "method_animation.gif": {
+      "sha256": "c7ed893beaef9c8022bad942dcd90273235f664f7a0905897556424536aa0218",
+      "transformation": "Derived presentation asset; see visual_provenance.json or method_animation.json for source hashes, aggregation and trace checks"
+    },
+    "method_animation.html": {
+      "sha256": "75199ec5afaafe9653f160205948757d25de2985a8f59f8efe2fb10601391081",
+      "transformation": "Derived presentation asset; see visual_provenance.json or method_animation.json for source hashes, aggregation and trace checks"
+    },
+    "method_animation.json": {
+      "sha256": "0bf8bca9eca92ecf2902eb2791b7a1f43e8d6751bfe60fac11c425798153d642",
+      "transformation": "Derived presentation asset; see visual_provenance.json or method_animation.json for source hashes, aggregation and trace checks"
+    },
+    "method_storyboard.png": {
+      "sha256": "6c2a41111dfb41f30634b37f02463e536b272955d17d3cefc28180bc861e5fa6",
+      "transformation": "Derived presentation asset; see visual_provenance.json or method_animation.json for source hashes, aggregation and trace checks"
+    },
+    "visual_condition_map.csv": {
+      "sha256": "5f2bfbdee7040b6f4c24f395b7f806fa63a7e6c40cc7fba629789ed7caca722f",
+      "transformation": "Derived presentation asset; see visual_provenance.json or method_animation.json for source hashes, aggregation and trace checks"
+    },
+    "visual_gap_distribution.csv": {
+      "sha256": "495eebd100f3ed0800d1837588c27423197768f74eb56fc83d33a6d448084928",
+      "transformation": "Derived presentation asset; see visual_provenance.json or method_animation.json for source hashes, aggregation and trace checks"
+    },
+    "visual_provenance.json": {
+      "sha256": "cf53e6eb1eb6473a014337323e3a53528346dcb2aa9799dc9f064dce2f1a4d7e",
+      "transformation": "Derived presentation asset; see visual_provenance.json or method_animation.json for source hashes, aggregation and trace checks"
     }
   }
 }

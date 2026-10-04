@@ -1,0 +1,73 @@
+{
+  "schema_version": 1,
+  "scope": "main follow-up holdout",
+  "split": "main",
+  "instance_count": 2400,
+  "source_counts": {
+    "real": 1200,
+    "synthetic": 1200
+  },
+  "metric": "100 * (1 - value / exact optimum)",
+  "aggregation": "Random averages ten trial values per instance before gap; DQN and selector average three seed gaps per instance. CDF averages empirical source CDFs equally.",
+  "condition_map": "24 exhaustive source x alpha x n cells, 100 paired instances each; improvement is greedy gap minus 3-seed mean selector gap.",
+  "cdf_interpretation": "Distribution of per-instance means, not individual trial/seed outcomes; exact means all averaged runs attained exact value. Counts are descriptive, not independent Bernoulli confidence intervals.",
+  "source_files": {
+    "results/portfolio-v2-evaluation/results.csv": "444a2058c58bf888ffc6df258df2121c2afcb1ccec5dc2a302fbe80b3175c6e2",
+    "results/portfolio-v2-evaluation/instances.jsonl": "d8deaa7ec8c7bffc3b5abec7a4d5e3d66fd0e7d6be96a2a2f2e1f5d6ea9bba21",
+    "results/portfolio-v2-evaluation/evaluation.json": "5c2b2f8cb39f085ce5dd2d31e2a090c721e51b43382835a9da8aec7e70f14f27",
+    "portfolio_report_tables/summary.csv": "1243e8a86cf53c2ef4b3ded812307f153253f5db03bd8bdde4ae9279a709b6e6"
+  },
+  "build_code_sha256": "4d6ed5f4744219c1476979bef43f41f8d51dafe8873c9af271a4d41c38ce19cc",
+  "validation": {
+    "published_summary_rows_checked": 56,
+    "max_abs_difference_pp": 7.105427357601002e-15,
+    "condition_cell_count": 24,
+    "condition_cell_size": 100
+  },
+  "method_statistics": {
+    "random": {
+      "mean_gap_pct": 42.98933609877713,
+      "instance_count": 2400,
+      "exact_count": 0,
+      "gap_at_most_1pct_count": 0,
+      "gap_above_5pct_count": 2400,
+      "max_gap_pct": 98.73281690771503
+    },
+    "greedy_density": {
+      "mean_gap_pct": 1.3566529243122039,
+      "instance_count": 2400,
+      "exact_count": 636,
+      "gap_at_most_1pct_count": 1919,
+      "gap_above_5pct_count": 122,
+      "max_gap_pct": 73.2015929828099
+    },
+    "dqn_mean": {
+      "mean_gap_pct": 9.374203232070041,
+      "instance_count": 2400,
+      "exact_count": 9,
+      "gap_at_most_1pct_count": 30,
+      "gap_above_5pct_count": 1784,
+      "max_gap_pct": 71.20387174833635
+    },
+    "selector_mean": {
+      "mean_gap_pct": 0.1590053984006689,
+      "instance_count": 2400,
+      "exact_count": 1316,
+      "gap_at_most_1pct_count": 2315,
+      "gap_above_5pct_count": 7,
+      "max_gap_pct": 17.04747158125307
+    }
+  },
+  "artifacts": {
+    "visual_gap_distribution.csv": {
+      "sha256": "495eebd100f3ed0800d1837588c27423197768f74eb56fc83d33a6d448084928",
+      "rows": 7617,
+      "bytes": 249680
+    },
+    "visual_condition_map.csv": {
+      "sha256": "5f2bfbdee7040b6f4c24f395b7f806fa63a7e6c40cc7fba629789ed7caca722f",
+      "rows": 24,
+      "bytes": 1903
+    }
+  }
+}

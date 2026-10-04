@@ -10,8 +10,10 @@
 
 **Verification:** Execute every code cell in a clean kernel from the existing project venv; validate nbformat, inspect emitted figures and HTML, check result assertions and provenance. The run must work without access to full Git-ignored datasets/checkpoints by using a small hashed teaching bundle and published result tables. Full reproduction commands are documentation only.
 
-- [ ] Audit sources and prepare compact teaching artifacts with source hashes.
-- [ ] Write extensive English narrative and short demonstrations, with clear measured-versus-illustrative labels.
-- [ ] Create presentation figures and a guided live-demo route.
-- [ ] Execute all cells, export HTML, inspect content and plots, and independently review claims.
-- [ ] Deliver notebook, HTML and concise instructions for the existing venv.
+- [x] Audit sources and prepare compact teaching artifacts with source hashes.
+- [x] Write extensive English narrative and short demonstrations, with clear measured-versus-illustrative labels.
+- [x] Create presentation figures and a guided live-demo route.
+- [x] Execute all cells, export HTML, inspect content and plots, and independently review claims.
+- [x] Deliver notebook, HTML and concise instructions for the existing venv.
+
+Verification evidence: `results/notebook-verification/execution.json` records 30 successful code cells and 13 embedded figures; `content-review.json` records resolved review findings; `portability.json` records a second successful run from a 33-file minimal copy with original-project reads blocked except for the existing venv. Browser inspection confirmed that all 13 HTML images loaded and formulas rendered without MathJax errors. The frozen experiment provenance check passed. Notebook and HTML links and kernel instructions are included in README.md.
